@@ -140,7 +140,11 @@ function setName(s){return D.sets[s]?D.sets[s].short:s}
 function brandName(){return artistOn()?ART:'สู้ๆ นะ!'}
 function tone(seed){return (typeof seed==='number'?Math.abs(seed):hash(String(seed)))%4}
 function tileHTML(cls,label,seed){return '<div class="'+(cls||'')+' ph-tile tone-'+tone(seed)+'" aria-hidden="true">'+(label?('<span>'+esc(label)+'</span>'):'')+'</div>'}
-function thumbHTML(seed,label){return getPrivacy()?tileHTML('thumb',label||'IC',seed):(function(n){return '<img class="thumb artist" loading="lazy" src="'+thumb(n)+'"'+posStyle(n)+' alt="">'})(typeof seed==='number'?seed:hash(String(seed)))}
+function headCrop(i){var p=D.photos[pidx(i)];if(!p||!p.fc||!p.w)return null;var w=p.w,h=p.h,F=p.fc[2]*h,S=Math.min(w,h,F*3.2),cx=p.fc[0]*w,top=p.fc[1]*h-F*0.8,left=cx-S/2;
+  left=Math.max(0,Math.min(w-S,left));top=Math.max(0,Math.min(h-S,top));return {S:S,w:w,h:h,l:left,t:top,big:S<w*0.6}}
+function thumbHTML(seed,label){if(getPrivacy())return tileHTML('thumb',label||'IC',seed);var n=typeof seed==='number'?seed:hash(String(seed)),c=headCrop(n);
+  if(!c)return '<img class="thumb artist" loading="lazy" src="'+thumb(n)+'"'+posStyle(n)+' alt="">';
+  return '<span class="thumb tz"><img class="artist" loading="lazy" src="'+(c.big?photo(n):thumb(n))+'" style="width:'+(c.w/c.S*100).toFixed(2)+'%;left:'+(-c.l/c.S*100).toFixed(2)+'%;top:'+(-c.t/c.S*100).toFixed(2)+'%" alt=""></span>'}
 /* ---------- stats ---------- */
 function record(q,ok){var st=S.stats[q.id]||{c:0,w:0};if(ok)st.c++;else st.w++;S.stats[q.id]=st;
   if(ok){if(S.wrong[q.id])delete S.wrong[q.id]}else S.wrong[q.id]=Date.now();S.answered[q.id]=1;save()}

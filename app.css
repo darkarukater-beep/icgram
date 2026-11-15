@@ -693,3 +693,6 @@ html[data-theme=light] .wl.no{background:#8a8a8a;border-color:#8a8a8a;color:#fff
 .w-row button.ok{background:#3f7a52;color:#fff;border-color:#3f7a52}
 .w-row button.in{background:#a8892c;color:#fff;border-color:#a8892c}
 .w-row button.no{opacity:.4}
+
+.thumb.tz{position:relative;display:block;overflow:hidden;background:var(--media)}
+.thumb.tz img{position:absolute;max-width:none;height:auto;display:block}
