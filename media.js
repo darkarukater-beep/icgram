@@ -10,6 +10,8 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;
 function toast(t){if(ctx.toast)ctx.toast(t)}
 function fmt(s){s=Math.max(0,Math.floor(s||0));var m=Math.floor(s/60),x=s%60;return m+':'+(x<10?'0':'')+x}
 function title(i){return priv()?('Track '+(i+1)):M.music[i].t}
+function cover(i){return (priv()||!M.music[i]||!M.music[i].c)?'':'assets/covers/'+M.music[i].c}
+function setLabel(el,i){if(!el)return;var c=cover(i);el.style.backgroundImage=c?'url('+c+')':'';el.classList.toggle('vl-priv',!c)}
 
 /* ---------------- MUSIC ---------------- */
 var st={i:0,t:0,shuffle:false,repeat:'all',vol:1,shown:false};
@@ -38,7 +40,7 @@ document.addEventListener('visibilitychange',function(){if(document.hidden)saveS
 
 function updMeta(){if(!('mediaSession' in navigator)||!M.music.length)return;
   try{var md={title:title(st.i),artist:'ICgram',album:priv()?'ICgram':'ICgram Playlist'};
-    if(!priv())md.artwork=[{src:'icons/icon-192.png?v=6',sizes:'192x192',type:'image/png'},{src:'icons/icon-512.png?v=6',sizes:'512x512',type:'image/png'}];
+    var cv=cover(st.i);if(cv)md.artwork=[{src:cv,sizes:'400x400',type:'image/jpeg'}];
     navigator.mediaSession.metadata=new MediaMetadata(md)}catch(e){}}
 function posState(){if(!('mediaSession' in navigator)||!navigator.mediaSession.setPositionState)return;
   try{if(A.duration&&isFinite(A.duration))navigator.mediaSession.setPositionState({duration:A.duration,playbackRate:A.playbackRate||1,position:Math.min(A.currentTime,A.duration)})}catch(e){}}
@@ -57,7 +59,7 @@ var ICO={play:'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="curre
 
 /* mini bar */
 var mini=document.createElement('div');mini.id='mini';mini.className='hidden';mini.setAttribute('role','region');mini.setAttribute('aria-label','เครื่องเล่นเพลง');
-mini.innerHTML='<div class="mini-prog"><i></i></div><button type="button" class="mini-info" aria-label="เปิดเครื่องเล่นเพลง"><span class="mini-ico">'+ICO.note+'</span><span class="mini-t"></span></button>'+
+mini.innerHTML='<div class="mini-prog"><i></i></div><button type="button" class="mini-info" aria-label="เปิดเครื่องเล่นเพลง"><span class="mini-disc" aria-hidden="true"><i class="vlabel"></i></span><span class="mini-t"></span></button>'+
  '<button type="button" class="mini-b" data-a="prev" aria-label="เพลงก่อนหน้า">'+ICO.prev+'</button><button type="button" class="mini-b mini-pp" data-a="pp" aria-label="เล่น/หยุด">'+ICO.play+'</button><button type="button" class="mini-b" data-a="next" aria-label="เพลงถัดไป">'+ICO.next+'</button><button type="button" class="mini-b mini-x" data-a="close" aria-label="ปิดเครื่องเล่น">'+ICO.close+'</button>';
 document.body.appendChild(mini);
 $('.mini-info',mini).onclick=openSheet;
@@ -74,11 +76,12 @@ function closeSheet(){sh.classList.add('hidden');document.body.classList.remove(
 function buildSheet(){
   var rep={off:'วนเล่น: ปิด',all:'วนทั้งหมด',one:'วนเพลงนี้'}[st.repeat];
   sh.innerHTML='<div class="msheet" role="dialog" aria-label="เครื่องเล่นเพลง"><div class="mhead"><b>เพลงประกอบการอ่าน</b><button type="button" class="icon-btn" id="mClose" aria-label="ปิด">×</button></div>'+
-  '<div class="mnow"><div class="mart">'+ICO.note+'</div><div class="mnt"><div class="mtitle"></div><div class="msub">'+(M.music.length)+' เพลง · เล่นต่อได้ขณะอ่าน</div></div></div>'+
+  '<div class="vinyl-wrap" aria-hidden="true"><div class="vinyl"><div class="vgrooves"></div><div class="vlabel"></div><div class="vhole"></div></div><div class="tonearm"><i class="ta-base"></i><i class="ta-arm"></i><i class="ta-head"></i></div></div>'+
+  '<div class="mnow"><div class="mnt"><div class="mtitle"></div><div class="msub">'+(M.music.length)+' เพลง · เล่นต่อได้ขณะอ่าน</div></div></div>'+
   '<input type="range" id="mSeek" min="0" max="1000" value="0" aria-label="ตำแหน่งเพลง"><div class="mtimes"><span id="mCur">0:00</span><span id="mDur">0:00</span></div>'+
   '<div class="mctl"><button type="button" class="mtog'+(st.shuffle?' on':'')+'" id="mShuf" aria-pressed="'+st.shuffle+'">สุ่ม</button><button type="button" class="mbig" id="mPrev" aria-label="ก่อนหน้า">'+ICO.prev+'</button><button type="button" class="mbig mpp" id="mPP" aria-label="เล่น/หยุด"></button><button type="button" class="mbig" id="mNext" aria-label="ถัดไป">'+ICO.next+'</button><button type="button" class="mtog'+(st.repeat!=='off'?' on':'')+'" id="mRep">'+rep+'</button></div>'+
   '<label class="mvol"><span>เสียง</span><input type="range" id="mVol" min="0" max="100" value="'+Math.round(st.vol*100)+'" aria-label="ระดับเสียง"></label>'+
-  '<ol class="mlist">'+M.music.map(function(s,i){return '<li><button type="button" data-i="'+i+'"><span class="mn">'+(i+1)+'</span><span class="ml">'+esc(title(i))+'</span><span class="md">'+fmt(s.d)+'</span></button></li>'}).join('')+'</ol></div>';
+  '<ol class="mlist">'+M.music.map(function(s,i){return '<li><button type="button" data-i="'+i+'"><span class="mn">'+(i+1)+'</span>'+(cover(i)?'<span class="mc" style="background-image:url('+cover(i)+')"></span>':'<span class="mc mc-priv"></span>')+'<span class="ml">'+esc(title(i))+'</span><span class="md">'+fmt(s.d)+'</span></button></li>'}).join('')+'</ol></div>';
   $('#mClose').onclick=closeSheet;$('#mPP').onclick=toggle;$('#mNext').onclick=function(){next(false)};$('#mPrev').onclick=prev;
   $('#mShuf').onclick=function(){st.shuffle=!st.shuffle;saveSt();buildSheet()};
   $('#mRep').onclick=function(){st.repeat={off:'all',all:'one',one:'off'}[st.repeat]||'all';saveSt();buildSheet()};
@@ -92,9 +95,9 @@ function renderTime(){var d=A.duration&&isFinite(A.duration)?A.duration:(M.music
   var p=d?Math.min(1,c/d):0;var bar=$('.mini-prog i',mini);if(bar)bar.style.width=(p*100)+'%';
   if(!sh.classList.contains('hidden')){var sk=$('#mSeek');if(sk&&!sk._drag)sk.value=Math.round(p*1000);var a=$('#mCur'),b=$('#mDur');if(a&&!(sk&&sk._drag))a.textContent=fmt(c);if(b)b.textContent=fmt(d)}}
 function render(){if(!M.music.length)return;var playing=!A.paused;
-  $('.mini-t',mini).textContent=title(st.i);$('.mini-pp',mini).innerHTML=playing?ICO.pause:ICO.play;mini.classList.toggle('playing',playing);
+  $('.mini-t',mini).textContent=title(st.i);$('.mini-pp',mini).innerHTML=playing?ICO.pause:ICO.play;mini.classList.toggle('playing',playing);sh.classList.toggle('playing',playing);setLabel($('.vlabel',mini),st.i);
   var tb=$('#btnMusic');if(tb)tb.classList.toggle('on',playing);
-  if(!sh.classList.contains('hidden')){var t=$('.mtitle',sh);if(t)t.textContent=title(st.i);var pp=$('#mPP');if(pp)pp.innerHTML=playing?ICO.pause:ICO.play;
+  if(!sh.classList.contains('hidden')){setLabel($('.vinyl .vlabel',sh),st.i);var t=$('.mtitle',sh);if(t)t.textContent=title(st.i);var pp=$('#mPP');if(pp)pp.innerHTML=playing?ICO.pause:ICO.play;
     $$('.mlist button',sh).forEach(function(b){b.classList.toggle('cur',+b.dataset.i===st.i)})}
   renderTime();var rb=$('#reelResume');if(rb)rb.classList.toggle('hidden',!(pausedByReel&&A.paused))}
 A.volume=st.vol;
@@ -106,29 +109,57 @@ if(st.shown)showMini();
 render();
 
 /* ---------------- REELS ---------------- */
-var R={io:null,near:null,muted:true,box:null};
+var LK='icgram-reel-likes';
+function likes(){try{var o=JSON.parse(localStorage.getItem(LK));return (o&&typeof o==='object'&&!Array.isArray(o))?o:{}}catch(e){return {}}}
+function setLike(id,on){var o=likes();if(on)o[id]=o[id]||Date.now();else delete o[id];try{localStorage.setItem(LK,JSON.stringify(o))}catch(e){}return on}
+function shuffled(n){var a=[];for(var k=0;k<n;k++)a.push(k);for(var x=n-1;x>0;x--){var y=Math.floor(Math.random()*(x+1)),t=a[x];a[x]=a[y];a[y]=t}return a}
+var R={io:null,near:null,muted:true,box:null,order:null,filter:'all',v:null};
+var HEART_O='<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 20.3s-7.8-4.6-7.8-10.3A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.8 2.6c0 5.7-7.8 10.3-7.8 10.3z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>';
+var HEART_F='<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 20.3s-7.8-4.6-7.8-10.3A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.8 2.6c0 5.7-7.8 10.3-7.8 10.3z" fill="currentColor"/></svg>';
+var REFRESH='<svg viewBox="0 0 24 24" width="18" height="18"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function reelsLeave(){if(R.io){R.io.disconnect();R.io=null}if(R.near){R.near.disconnect();R.near=null}
   if(R.box){$$('video',R.box).forEach(function(v){try{v.pause();v.removeAttribute('src');v.load()}catch(e){}})}
   R.box=null;document.body.classList.remove('in-reels');window.removeEventListener('resize',fit)}
 function fit(){if(!R.box)return;var tb=$('#topbar'),nv=$('#bottomnav');var top=tb?tb.getBoundingClientRect().bottom:0,bot=nv?nv.getBoundingClientRect().height:0;
-  R.box.style.top=Math.max(0,top)+'px';R.box.style.bottom=bot+'px'}
-function reels(v){reelsLeave();document.body.classList.add('in-reels');
-  var p=priv();
+  R.box.style.top=Math.max(0,top)+'px';R.box.style.bottom=bot+'px';var bar=$('#reelBar');if(bar)bar.style.top=(Math.max(0,top)+8)+'px';var pl=$('#reelPull');if(pl)pl.style.top=(Math.max(0,top)+6)+'px';
+  var rr=$('#reelResume');if(rr)rr.style.top=(Math.max(0,top)+52)+'px'}
+function refreshReels(){R.order=shuffled(M.reels.length);if(R.v)reels(R.v);if(R.box)R.box.scrollTop=0;toast(R.filter==='liked'?'สุ่มลำดับรีลที่ชอบใหม่แล้ว':'สุ่มลำดับรีลใหม่แล้ว')}
+function burst(sec){var b=document.createElement('div');b.className='heart-burst';b.innerHTML=HEART_F;sec.appendChild(b);setTimeout(function(){if(b.parentNode)b.parentNode.removeChild(b)},900)}
+function paintLike(sec,on){var b=$('.reel-like',sec);if(!b)return;b.innerHTML=on?HEART_F:HEART_O;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));b.setAttribute('aria-label',on?'เลิกถูกใจ':'ถูกใจ');updCount()}
+function updCount(){var n=Object.keys(likes()).length,c=$('#reelLikedN');if(c)c.textContent=n?String(n):''}
+function reels(v){reelsLeave();R.v=v;document.body.classList.add('in-reels');
+  if(!R.order||R.order.length!==M.reels.length){R.order=[];for(var k=0;k<M.reels.length;k++)R.order.push(k)}
+  var p=priv(),lk=likes();
+  var list=R.order.filter(function(ix){return R.filter!=='liked'||lk[M.reels[ix].f]});
   var h='<div id="reels" class="reels'+(p?' reels-priv':'')+'">';
-  M.reels.forEach(function(r,i){
-    if(p){h+='<section class="reel" data-i="'+i+'"><div class="ph-tile tone-'+(i%4)+' reel-tile"><span>Reel '+(i+1)+'</span></div><div class="reel-cap"><b>Reel '+(i+1)+' / '+M.reels.length+'</b><div>โหมดส่วนตัวเปิดอยู่ · ซ่อนวิดีโอแล้ว<br>ปิดโหมดส่วนตัว (ไอคอนตา) เพื่อดูรีล</div></div></section>';return}
-    h+='<section class="reel" data-i="'+i+'"><video class="artist" playsinline webkit-playsinline muted loop preload="none" data-src="assets/reels/'+r.f+'" data-poster="assets/reels/'+r.p+'"></video>'+
+  if(p){M.reels.forEach(function(r,i){h+='<section class="reel" data-i="'+i+'"><div class="ph-tile tone-'+(i%4)+' reel-tile"><span>Reel '+(i+1)+'</span></div><div class="reel-cap"><b>Reel '+(i+1)+' / '+M.reels.length+'</b><div>โหมดส่วนตัวเปิดอยู่ · ซ่อนวิดีโอแล้ว<br>ปิดโหมดส่วนตัว (ไอคอนตา) เพื่อดูรีล</div></div></section>'})}
+  else if(!list.length){h+='<section class="reel reel-empty"><div><div class="re-h">'+HEART_O+'</div><b>ยังไม่มีรีลที่ถูกใจ</b><p>แตะหัวใจหรือแตะสองครั้งที่คลิปเพื่อเก็บไว้ดูที่นี่</p><button type="button" class="btn sm" id="reelAll">ดูรีลทั้งหมด</button></div></section>'}
+  else list.forEach(function(ix,n){var r=M.reels[ix],on=!!lk[r.f];
+    h+='<section class="reel" data-id="'+esc(r.f)+'"><video class="artist" playsinline webkit-playsinline muted loop preload="none" data-src="assets/reels/'+r.f+'" data-poster="assets/reels/'+r.p+'"></video>'+
       '<div class="reel-tap" aria-hidden="true"></div><div class="reel-paused hidden">'+ICO.play+'</div>'+
-      '<div class="reel-side"><button type="button" class="reel-btn reel-mute" aria-label="เปิด/ปิดเสียง"></button></div>'+
-      '<div class="reel-cap"><b>'+(i+1)+' / '+M.reels.length+'</b>'+(r.c?'<div>'+esc(r.c)+'</div>':'')+'</div></section>'});
-  h+='</div><button type="button" id="reelResume" class="reel-resume hidden">'+ICO.play+'<span>เล่นเพลงต่อ</span></button>';
-  v.innerHTML=h;R.box=$('#reels',v);fit();window.addEventListener('resize',fit);
+      '<div class="reel-side"><button type="button" class="reel-btn reel-like'+(on?' on':'')+'" aria-pressed="'+on+'" aria-label="'+(on?'เลิกถูกใจ':'ถูกใจ')+'">'+(on?HEART_F:HEART_O)+'</button><button type="button" class="reel-btn reel-mute" aria-label="เปิด/ปิดเสียง"></button></div>'+
+      '<div class="reel-cap"><b>'+(n+1)+' / '+list.length+'</b>'+(r.c?'<div>'+esc(r.c)+'</div>':'')+'</div></section>'});
+  h+='</div>';
+  if(!p)h+='<div id="reelPull" class="reel-pull" aria-hidden="true">'+REFRESH+'</div><div id="reelBar" class="reel-bar"><button type="button" class="rb'+(R.filter==='all'?' on':'')+'" data-f="all">ทั้งหมด</button><button type="button" class="rb'+(R.filter==='liked'?' on':'')+'" data-f="liked">'+HEART_F+'<span>ที่ชอบ</span><span id="reelLikedN" class="rb-n"></span></button><button type="button" class="rb rb-ref" id="reelRefresh" aria-label="สุ่มลำดับใหม่">'+REFRESH+'<span>สุ่มใหม่</span></button></div>';
+  h+='<button type="button" id="reelResume" class="reel-resume hidden">'+ICO.play+'<span>เล่นเพลงต่อ</span></button>';
+  v.innerHTML=h;R.box=$('#reels',v);fit();window.addEventListener('resize',fit);updCount();
   $('#reelResume').onclick=function(){R.muted=true;if(R.box)$$('video',R.box).forEach(function(x){x.muted=true});updMute();play()};
   if(p)return;
-  var secs=$$('.reel',R.box);
-  secs.forEach(function(s){var vd=$('video',s);
+  $('#reelRefresh').onclick=refreshReels;
+  $$('#reelBar [data-f]').forEach(function(b){b.onclick=function(){if(R.filter===b.dataset.f)return;R.filter=b.dataset.f;reels(v)}});
+  var ra=$('#reelAll');if(ra)ra.onclick=function(){R.filter='all';reels(v)};
+  /* pull to refresh */
+  var py=null,pd=0,pull=$('#reelPull');
+  R.box.addEventListener('touchstart',function(e){py=(R.box.scrollTop<=0&&e.touches.length===1)?e.touches[0].clientY:null;pd=0},{passive:true});
+  R.box.addEventListener('touchmove',function(e){if(py==null)return;pd=e.touches[0].clientY-py;if(pd>0&&R.box.scrollTop<=0){var t=Math.min(pd,110);pull.style.transform='translateX(-50%) translateY('+(t*0.6)+'px) rotate('+(t*3)+'deg)';pull.style.opacity=Math.min(1,t/70);pull.classList.toggle('ready',t>=80)}},{passive:true});
+  R.box.addEventListener('touchend',function(){if(py==null)return;var go=pd>=80&&R.box.scrollTop<=0;py=null;pull.style.transform='';pull.style.opacity='';pull.classList.remove('ready');if(go)refreshReels()});
+  var secs=$$('.reel[data-id]',R.box);
+  secs.forEach(function(s){var vd=$('video',s),id=s.dataset.id,last=0,single=null;
     vd.addEventListener('loadedmetadata',function(){s.classList.toggle('land',vd.videoWidth/vd.videoHeight>0.75)});
-    $('.reel-tap',s).onclick=function(){if(vd.paused){playReel(vd)}else{vd.pause();$('.reel-paused',s).classList.remove('hidden')}};
+    $('.reel-tap',s).onclick=function(){var t=Date.now();
+      if(t-last<300){clearTimeout(single);single=null;last=0;if(!likes()[id]){setLike(id,true);paintLike(s,true)}burst(s);return}
+      last=t;single=setTimeout(function(){single=null;if(vd.paused){playReel(vd)}else{vd.pause();$('.reel-paused',s).classList.remove('hidden')}},300)};
+    $('.reel-like',s).onclick=function(e){e.stopPropagation();var on=setLike(id,!likes()[id]);paintLike(s,on);if(on)burst(s)};
     $('.reel-mute',s).onclick=function(e){e.stopPropagation();R.muted=!R.muted;secs.forEach(function(x){var y=$('video',x);y.muted=R.muted});updMute();if(!R.muted){if(vd.paused)playReel(vd);musicDuck()}};
   });
   updMute();
@@ -146,6 +177,6 @@ function musicDuck(){if(!A.paused){A.pause();saveSt();pausedByReel=true;toast('�
 function updMute(){if(!R.box)return;$$('.reel-mute',R.box).forEach(function(b){b.innerHTML=R.muted?'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>':'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';b.setAttribute('aria-pressed',String(!R.muted))})}
 
 function onPrivacy(){updMeta();render();if(!sh.classList.contains('hidden'))buildSheet()}
-window.ICMedia={init:function(c){ctx=c||{}},reels:reels,leave:reelsLeave,onPrivacy:onPrivacy,
+window.ICMedia={init:function(c){ctx=c||{}},reels:reels,refreshReels:refreshReels,likes:likes,LIKES_KEY:LK,R:R,leave:reelsLeave,onPrivacy:onPrivacy,
   play:play,pause:pause,next:function(){next(false)},prev:prev,open:openSheet,close:closeSheet,audio:A,state:function(){return st},KEY:MK};
 })();

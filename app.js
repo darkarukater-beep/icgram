@@ -95,7 +95,8 @@ function parseBackup(raw){raw=String(raw||'').replace(/\s+/g,'');if(!raw)throw n
   var p=JSON.parse(json);var d=p&&(p.d||p.data);if(!d||typeof d!=='object')throw new Error('shape');
   var keys=Object.keys(d).filter(function(k){return k.indexOf('icgram')===0});if(!keys.length)throw new Error('keys');
   return {d:d,keys:keys}}
-function mergeVal(k,inc){if(k==='icgram_learn'&&window.LEARN&&inc&&typeof inc==='object'){var lc;try{lc=JSON.parse(localStorage.getItem(k))}catch(e){lc=null}return window.LEARN.merge(lc,inc)}
+function mergeVal(k,inc){if(k==='icgram-reel-likes'&&inc&&typeof inc==='object'&&!Array.isArray(inc)){var lc2;try{lc2=JSON.parse(localStorage.getItem(k))||{}}catch(e){lc2={}}var o2={};[lc2,inc].forEach(function(src){Object.keys(src).forEach(function(x){if(typeof src[x]==='number'&&(o2[x]==null||src[x]<o2[x]))o2[x]=src[x]})});return o2}
+  if(k==='icgram_learn'&&window.LEARN&&inc&&typeof inc==='object'){var lc;try{lc=JSON.parse(localStorage.getItem(k))}catch(e){lc=null}return window.LEARN.merge(lc,inc)}
   if(k!==KEY||!inc||typeof inc!=='object'||Array.isArray(inc))return inc;
   var cur=S||{}, out={};
   var att=(cur.attempts||[]).concat(inc.attempts||[]), seen={}, uniq=[];
@@ -341,10 +342,13 @@ function likedItems(){return Object.keys(S.liked).sort(function(a,b){return S.li
 function gridHTML(items){return '<div class="grid3">'+items.map(function(it,i){var media=getPrivacy()?tileHTML('', '', hash(it.id)):'<img loading="lazy" class="artist" src="'+thumb(hash(it.id))+'" alt="">';return '<div class="gi" data-i="'+i+'">'+media+'<span>'+esc(it.label)+'</span></div>'}).join('')+'</div>'}
 function wireGrid(v,items){$$('.gi',v).forEach(function(g){g.onclick=function(){var it=items[+g.dataset.i];modal(it.html+'<div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button><button class="btn" id="unlike">♡ เอาออก</button></div>');$('#unlike').onclick=function(){toggleLike(it.id,null);closeModal();go(cur)}}})}
 function likedPage(v){var it=likedItems();v.innerHTML='<div class="page"><h1>♥ ที่บันทึกไว้</h1><p class="muted">กดหัวใจในฟีดหรือในข้อสอบเพื่อเก็บไว้ที่นี่</p></div>'+(it.length?gridHTML(it):'<div class="page"><div class="card">ยังไม่มีโพสต์ที่บันทึกไว้</div></div>');wireGrid(v,it)}
+var IG=[['JENNIE','jennierubyjane'],['Wonyoung (IVE)','for_everyoung10'],['Natty (KISS OF LIFE)','natty_0530']];
 function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;var nC=0,nW=0;for(var k in S.stats){nC+=S.stats[k].c;nW+=S.stats[k].w}
   var av=getPrivacy()?tileHTML('',(ME&&ME.charAt(0))||'M',0):'<img class="artist" src="'+thumb(0)+'" alt="">';
   var h='<div class="prof"><div class="ring">'+av+'</div><div class="pst"><div><b>'+tot+'</b><span>ชุดข้อสอบ</span></div><div><b>'+(nC+nW?Math.round(100*nC/(nC+nW))+'%':'–')+'</b><span>ตอบถูกรวม</span></div><div><b>'+it.length+'</b><span>บันทึก</span></div></div></div>'+
   '<div class="page" style="padding-top:0"><b>'+esc(ME)+'</b> · ติวสอบ IC Plain (P1)'+(artistOn()?' · ทีม '+esc(NAMES.join(' / ')||ART):'')+'<div class="muted">เป้าหมาย ≥ '+PASS+'% · อ่านวันอาทิตย์ทีละนิดก็ถึงได้</div>'+
+  (artistOn()?'<div class="ig-tags">'+IG.map(function(a){return '<a class="ig-tag" href="https://www.instagram.com/'+a[1]+'/" target="_blank" rel="noopener noreferrer" title="'+esc(a[0])+' บน Instagram">@'+esc(a[1])+'</a>'}).join('')+'</div>':'')+
+  '<div id="passBox"></div>'+
   '<h2>ธีม</h2><div class="seg" id="themeSeg"><button type="button" data-theme-set="dark">โทนดำ</button><button type="button" data-theme-set="light">โทนขาว</button></div><p class="muted">ใช้โทนเดียวกันทั้งเว็บ ระบบจำค่าที่เลือกไว้ให้</p>'+
   '<h2>โหมดส่วนตัว</h2><div class="seg" id="privacySeg"><button type="button" data-privacy-set="off">แสดงรูป</button><button type="button" data-privacy-set="on">ซ่อนรูปศิลปิน</button></div><p class="muted">เวลาอ่านข้างนอก ซ่อนรูปและชื่อศิลปินได้ ระบบจำค่าที่เลือกไว้ให้ และรวมในรหัสสำรองด้วย</p>'+
   '<h2>คะแนนสูงสุด</h2>'+Object.keys(D.sets).concat(['mix']).map(function(k){var p=S.best[k];return '<div class="bar2"><span class="lbl">'+esc(k==='mix'?'สุ่มรวม':D.sets[k].title)+'</span><div class="prog"><i style="width:'+(p||0)+'%"></i></div><span class="pc">'+(p!=null?p+'%':'–')+'</span></div>'}).join('')+
@@ -356,6 +360,7 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
   '<h2>โหลดความคืบหน้า</h2><p class="muted">วางรหัสที่สำรองไว้ แล้วกดโหลด ระบบจะรวมกับข้อมูลในเครื่องนี้</p><textarea class="bak-code" id="bakIn" rows="4" placeholder="วางรหัสที่นี่"></textarea><button class="btn pri sm" id="bakLoad">โหลดความคืบหน้า</button>'+
   '<div style="margin-top:18px"><button class="btn sm" id="reset">ล้างข้อมูลความคืบหน้าทั้งหมด</button></div></div>';
   v.innerHTML=h;wireGrid(v,it);$('#toRev').onclick=function(){go('review')};
+  if(window.ICPass)ICPass.render($('#passBox'),{toast:toast,esc:esc});
   $$('#themeSeg [data-theme-set]').forEach(function(b){b.onclick=function(){applyTheme(b.getAttribute('data-theme-set'))}});
   syncThemeUI(getTheme());
   $$('#privacySeg [data-privacy-set]').forEach(function(b){b.onclick=function(){var on=b.getAttribute('data-privacy-set')==='on';applyPrivacy(on);toast(on?'ซ่อนรูปศิลปินแล้ว':'แสดงรูปศิลปินแล้ว')}});
