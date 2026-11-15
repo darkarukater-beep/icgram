@@ -123,6 +123,11 @@ function thumb(i){return photo(i).replace(/\/p(\d+)\.jpg$/,'/t$1.jpg')}
 function rphoto(){return photo(rnd(D.photos.length))}
 function pidx(i){return ((i%D.photos.length)+D.photos.length)%D.photos.length}
 function posStyle(i){var p=D.photos[pidx(i)];if(!p||!p.fc)return '';return ' style="object-position:'+Math.round(p.fc[0]*100)+'% '+Math.round(Math.max(0,p.fc[1]-p.fc[2]*0.15)*100)+'%"'}
+function bannerPos(i,W,H,txt){var p=D.photos[pidx(i)];if(!p||!p.fc||!p.w)return null;var w=p.w,h=p.h,sc=Math.max(W/w,H/h),iw=w*sc,ih=h*sc,fx=p.fc[0],fy=p.fc[1],fh=p.fc[2],F=fh*ih,ft=(fy-fh/2)*ih,head=ft-0.45*F;
+  var offY=Math.min(Math.max(head-8,0),Math.max(0,ih-H)),offX=Math.min(Math.max(fx*iw-W/2,0),Math.max(0,iw-W));
+  var ok=(head-offY)>=0&&(ft+F-offY)<=(1-(txt||0))*H;
+  return {ok:ok,css:'object-position:'+(iw>W?(offX/(iw-W)*100).toFixed(1):'50')+'% '+(ih>H?(offY/(ih-H)*100).toFixed(1):'50')+'%'}}
+function heroPool(W){var a=[];for(var i=0;i<D.photos.length;i++){var b=bannerPos(i,W,250,0.42);if(b&&b.ok)a.push(i)}return a.length?a:[0]}
 var FP=[];D.photos.forEach(function(p,i){if(p.fc)FP.push(i)});if(!FP.length)FP=D.photos.map(function(p,i){return i});
 function feedStyle(i){var p=D.photos[i];if(!p||!p.fc||!p.w)return '';var w=p.w,h=p.h,A=1.25,s0=Math.max(1/w,A/h),fx=p.fc[0],fy=p.fc[1],fhn=p.fc[2];
   var ty=Math.max(0.2*A,fhn*h*s0*0.62),need=s0;if(fy>0)need=Math.max(need,ty/(fy*h));if(fy<1)need=Math.max(need,(A-ty)/((1-fy)*h));var sc=Math.min(need,s0*1.9);
@@ -156,7 +161,7 @@ var cur='home',curArg=null;
 function go(tab,arg){if(window.ICMedia)ICMedia.leave();if(window.ICGames)ICGames.leave();cur=tab;if(arguments.length>1)curArg=arg;$$('#bottomnav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
   stopHero();window.scrollTo(0,0);var v=$('#view');v.innerHTML='';
   ({home:home,read:readList,chapter:chapter,formula:formulaPage,quiz:quizHome,run:runQuiz,review:review,profile:profile,liked:likedPage,reels:function(v){if(window.ICMedia)ICMedia.reels(v)},games:function(v,a){if(window.ICGames)ICGames.render(v,a,gameCtx())}})[tab](v,arg);}
-function gameCtx(){return {go:go,photo:photo,thumb:thumb,pos:posStyle,getPrivacy:getPrivacy,tileHTML:tileHTML,cheer:cheer,toast:toast,evalExpr:calcEval,fmtNum:calcFmt,questions:D.questions}}
+function gameCtx(){return {bpos:bannerPos,go:go,photo:photo,thumb:thumb,pos:posStyle,getPrivacy:getPrivacy,tileHTML:tileHTML,cheer:cheer,toast:toast,evalExpr:calcEval,fmtNum:calcFmt,questions:D.questions}}
 $$('#bottomnav button').forEach(function(b){b.onclick=function(){go(b.dataset.tab)}});
 $('#logo').onclick=function(){go('home')};
 $('#btnFormula').onclick=function(){go('formula')};
@@ -172,7 +177,9 @@ applyTheme(getTheme());
 var heroT=null;function stopHero(){if(heroT){clearInterval(heroT);heroT=null}}
 function home(v){
   // notes
-  var notes='<div class="notes">'+D.notes.map(function(n,i){return '<div class="note" data-i="'+i+'">'+n.short+'</div>'}).join('')+'</div>';
+  var NAV=[];for(var q=0;q<D.photos.length&&NAV.length<D.notes.length;q+=7){if(headCrop(q))NAV.push(q)}
+  var notes='<div class="notes ign" aria-label="โน้ต">'+D.notes.map(function(n,i){var sd=NAV.length?NAV[i%NAV.length]:i;
+    return '<button type="button" class="note" data-i="'+i+'" style="--d:'+(i%4*0.6).toFixed(1)+'s"><span class="nbub"><span class="ntx">'+n.short+'</span><i class="nt1"></i><i class="nt2"></i></span><span class="nav">'+thumbHTML(sd,' ')+'</span><span class="nlb">โน้ต '+(i+1)+'</span></button>'}).join('')+'</div>';
   // stories: chapters + formula decks
   var st='<div class="stories">'+D.stories.map(function(s,i){
     var inner=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,8),i):'<img loading="lazy" class="artist" src="'+thumb(s.photo)+'"'+posStyle(s.photo)+' alt="">';
@@ -181,7 +188,7 @@ function home(v){
   var tot=S.attempts.length, ans=Object.keys(S.answered).length, best=Math.max.apply(null,[0].concat(Object.keys(S.best).map(function(k){return S.best[k]})));
   var wk=weakTopics();
   var heroInner=getPrivacy()?tileHTML('hero-tile','',0)+'<div class="shade"></div>'
-    :'<img id="h1" class="artist" src="'+photo(0)+'" alt=""><img id="h2" class="artist" src="'+photo(1)+'" style="opacity:0" alt=""><div class="shade"></div>';
+    :'<img id="h1" class="artist" alt=""><img id="h2" class="artist" style="opacity:0" alt=""><div class="shade"></div>';
   var dash='<section class="dash"><div class="hero'+(getPrivacy()?' privacy-hero':'')+'">'+heroInner+'<div class="htxt"><h2>'+'สู้ๆ นะ '+esc(ME)+'! 🤍'+'</h2><p>ICgram'+(artistOn()?' · ธีม '+esc(ART):'')+' · เป้าหมาย: สอบ IC Plain (P1) ผ่าน ≥ '+PASS+'% · วันนี้อ่านนิด ทำข้อสอบหน่อยก็พอ</p></div></div>'+
    '<div class="stats"><div><b>'+tot+'</b><span>ชุดที่ทำแล้ว</span></div><div><b>'+ans+'/'+D.questions.length+'</b><span>ข้อที่เคยตอบ</span></div><div><b>'+(tot?best+'%':'–')+'</b><span>คะแนนสูงสุด</span></div></div>'+
    '<div class="weak">'+(wk.length?'<b>หัวข้อที่ควรทวน:</b><br>'+wk.map(function(w){return '<button class="chip" data-ch="'+w.ch+'">'+esc(chTitle(w.ch))+' · '+w.pct+'%</button>'}).join(''):'<span class="muted">ทำข้อสอบสักชุด แล้วระบบจะบอกหัวข้อที่ควรทวนให้ตรงนี้</span>')+
@@ -191,7 +198,10 @@ function home(v){
   $$('.st',v).forEach(function(e){e.onclick=function(){openStory(+e.dataset.s)}});
   $$('.chip[data-ch]',v).forEach(function(e){e.onclick=function(){go('chapter',e.dataset.ch)}});
   $('#goQuiz').onclick=function(){go('quiz')};$('#goRead').onclick=function(){go('read')};$('#goF').onclick=function(){go('formula','sheet')};$('#goL').onclick=function(){go('formula','learn')};$('#goG').onclick=function(){go('games')};
-  if(!getPrivacy()){var k=1;heroT=setInterval(function(){var a=$('#h1'),b=$('#h2');if(!a){stopHero();return}k++;var top=(k%2)?a:b,bot=(k%2)?b:a;bot.src=photo(rnd(D.photos.length));setTimeout(function(){bot.style.opacity=1;top.style.opacity=0},300)},5000)}
+  if(!getPrivacy()){var hero=$('.hero',v),HW=Math.round(hero.clientWidth||390),HPOOL=shuffle(heroPool(HW)),hk=0;
+    var setH=function(img){var i=HPOOL[hk++%HPOOL.length],b=bannerPos(i,HW,250,0.42);img.src=photo(i);img.style.cssText=(img.id==='h2'&&img.style.opacity==='0'?'opacity:0;':'')+(b?b.css:'');img.dataset.p=i};
+    setH($('#h1'));setH($('#h2'));$('#h2').style.opacity=0;
+    var k=1;heroT=setInterval(function(){var a=$('#h1'),b=$('#h2');if(!a){stopHero();return}k++;var top=(k%2)?a:b,bot=(k%2)?b:a;var op=bot.style.opacity;setH(bot);bot.style.opacity=op;setTimeout(function(){bot.style.opacity=1;top.style.opacity=0},300)},5000)}
   buildFeed();renderFeed(12);$('#more').onclick=function(){renderFeed(10)};
 }
 var FEED=[],fpos=0;

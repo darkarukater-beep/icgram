@@ -122,11 +122,7 @@ img{max-width:100%}
 #navAvatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid transparent}
 #bottomnav button.on #navAvatar{border-color:var(--on)}
 /* notes + stories */
-.notes{display:flex;gap:10px;overflow-x:auto;padding:10px 12px 0;scrollbar-width:none}
 .notes::-webkit-scrollbar,.stories::-webkit-scrollbar{display:none}
-.note{flex:0 0 auto;max-width:150px;background:var(--card);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:6px 10px;font-size:12.5px;line-height:1.35;box-shadow:none;cursor:pointer;position:relative;color:var(--ink)}
-.note b{color:var(--heading)}
-.note .katex{font-size:1em}
 .stories{display:flex;gap:12px;overflow-x:auto;padding:10px 12px 12px;scrollbar-width:none;border-bottom:1px solid var(--line)}
 .st{flex:0 0 auto;width:72px;text-align:center;border:0;background:none;padding:0}
 .ring{width:68px;height:68px;border-radius:50%;padding:2px;background:var(--ring);margin:0 auto}
@@ -710,3 +706,24 @@ html[data-theme=light] .wl.no{background:#8a8a8a;border-color:#8a8a8a;color:#fff
  38%{transform:translate(-50%,-50%) rotate(var(--r,0deg)) scale(1.04)}
  60%{transform:translate(-50%,-62%) rotate(var(--r,0deg)) scale(1);opacity:1}
  100%{transform:translate(-50%,-150%) rotate(var(--r,0deg)) scale(.85);opacity:0}}
+
+/* IG-style Notes row */
+.notes.ign{display:flex;gap:6px;overflow-x:auto;padding:10px 10px 4px;scrollbar-width:none;align-items:flex-end}
+.notes.ign .note{flex:0 0 auto;width:96px;display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;margin:0;cursor:pointer;color:var(--ink);font:inherit;box-shadow:none;max-width:none;border-radius:0}
+.note .nbub{position:relative;display:block;max-width:92px;min-width:44px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:6px 9px;font-size:11.5px;line-height:1.3;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.25);margin-bottom:9px;animation:nfloat 3.2s ease-in-out infinite;animation-delay:var(--d,0s)}
+.note .ntx{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.note .ntx b{color:var(--heading);font-weight:700}
+.note .ntx .katex{font-size:1em}
+.note .nt1,.note .nt2{position:absolute;display:block;background:var(--card);border:1px solid var(--line);border-radius:50%}
+.note .nt1{width:9px;height:9px;left:30%;bottom:-6px}
+.note .nt2{width:5px;height:5px;left:calc(30% - 5px);bottom:-12px}
+.note .nav{display:block;width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--media);border:1px solid var(--line)}
+.note .nav .thumb{width:100%!important;height:100%!important;border-radius:50%;margin:0}
+.note .nav img.thumb{object-fit:cover}
+.note .nav .ph-tile{background:#8a8a8a!important;color:transparent}
+.note .nav .ph-tile *{display:none}
+.note .nlb{display:block;font-size:11px;margin-top:4px;color:var(--muted,var(--ink));opacity:.8;white-space:nowrap}
+@keyframes nfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@media (prefers-reduced-motion:reduce){.note .nbub{animation:none}}
+.note:not(button){display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:12.5px;line-height:1.35;color:var(--ink)}
+.note:not(button) b{color:var(--heading)}
