@@ -48,8 +48,8 @@ function thumb(i){return photo(i).replace(/\/p(\d+)\.jpg$/,'/t$1.jpg')}
 function rphoto(){return photo(rnd(D.photos.length))}
 function hash(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h)}
 function cheerName(){return NAMES.length?pick(NAMES):''}
-var CHEERS_OK=['เก่งมาก! {n} ภูมิใจในตัว'+ME+'สุดๆ 💖','ผ่านฉลุย! {n} ปรบมือให้เลย 👏','สวยงาม! {n} บอกว่าวันสอบจริงก็ทำได้แน่','ปังมาก! {n} ขอเป็นกำลังใจให้ต่อไป ✨'];
-var CHEERS_TRY=['ไม่เป็นไรนะ {n} เป็นกำลังใจให้ ลองทบทวนข้อที่ผิดอีกนิด 💪','ใกล้แล้ว! {n} เชื่อว่ารอบหน้าผ่านแน่','ทุกข้อที่ผิดคือข้อที่จะจำได้ในวันสอบ — {n} สู้ไปด้วยกัน','พักหายใจแป๊บ แล้วลุยต่อ {n} รออยู่ 🌸'];
+var CHEERS_OK=['เก่งมาก! {n} ภูมิใจในตัว'+ME+'สุดๆ ✨','ผ่านฉลุย! {n} ปรบมือให้เลย 👏','สวยงาม! {n} บอกว่าวันสอบจริงก็ทำได้แน่','ปังมาก! {n} ขอเป็นกำลังใจให้ต่อไป ✨'];
+var CHEERS_TRY=['ไม่เป็นไรนะ {n} เป็นกำลังใจให้ ลองทบทวนข้อที่ผิดอีกนิด 💪','ใกล้แล้ว! {n} เชื่อว่ารอบหน้าผ่านแน่','ทุกข้อที่ผิดคือข้อที่จะจำได้ในวันสอบ — {n} สู้ไปด้วยกัน','พักหายใจแป๊บ แล้วลุยต่อ {n} รออยู่ ✨'];
 function cheer(ok){var n=cheerName();var t=pick(ok?CHEERS_OK:CHEERS_TRY);return n?t.replace('{n}',n):(ok?'เก่งมาก! สู้ๆ นะ!':'สู้ๆ นะ! ลองอีกรอบ')}
 function toast(t){var e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){e.classList.remove('show')},1600)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -83,7 +83,7 @@ function home(v){
   var st='<div class="stories">'+D.stories.map(function(s,i){return '<button class="st" data-s="'+i+'"><div class="ring'+(S.seen[s.id]?' seen':'')+'"><img loading="lazy" src="'+thumb(s.photo)+'" alt=""></div><span class="sl">'+esc(s.label)+'</span></button>'}).join('')+'</div>';
   var tot=S.attempts.length, ans=Object.keys(S.answered).length, best=Math.max.apply(null,[0].concat(Object.keys(S.best).map(function(k){return S.best[k]})));
   var wk=weakTopics();
-  var dash='<section class="dash"><div class="hero"><img id="h1" src="'+photo(0)+'" alt=""><img id="h2" src="'+photo(1)+'" style="opacity:0" alt=""><div class="shade"></div><div class="htxt"><h2>'+'สู้ๆ นะ '+esc(ME)+'! 💕'+'</h2><p>ICgram'+(ART?' · ธีม '+esc(ART):'')+' · เป้าหมาย: สอบ IC Plain (P1) ผ่าน ≥ '+PASS+'% · วันนี้อ่านนิด ทำข้อสอบหน่อยก็พอ</p></div></div>'+
+  var dash='<section class="dash"><div class="hero"><img id="h1" src="'+photo(0)+'" alt=""><img id="h2" src="'+photo(1)+'" style="opacity:0" alt=""><div class="shade"></div><div class="htxt"><h2>'+'สู้ๆ นะ '+esc(ME)+'! 🤍'+'</h2><p>ICgram'+(ART?' · ธีม '+esc(ART):'')+' · เป้าหมาย: สอบ IC Plain (P1) ผ่าน ≥ '+PASS+'% · วันนี้อ่านนิด ทำข้อสอบหน่อยก็พอ</p></div></div>'+
    '<div class="stats"><div><b>'+tot+'</b><span>ชุดที่ทำแล้ว</span></div><div><b>'+ans+'/'+D.questions.length+'</b><span>ข้อที่เคยตอบ</span></div><div><b>'+(tot?best+'%':'–')+'</b><span>คะแนนสูงสุด</span></div></div>'+
    '<div class="weak">'+(wk.length?'<b>หัวข้อที่ควรทวน:</b><br>'+wk.map(function(w){return '<button class="chip" data-ch="'+w.ch+'">'+esc(chTitle(w.ch))+' · '+w.pct+'%</button>'}).join(''):'<span class="muted">ทำข้อสอบสักชุด แล้วระบบจะบอกหัวข้อที่ควรทวนให้ตรงนี้</span>')+
    '<div style="margin-top:8px"><button class="btn pri sm" id="goQuiz">เริ่มทำข้อสอบ</button><button class="btn sm" id="goRead">อ่านเนื้อหา</button><button class="btn sm" id="goF">ชีตสูตร</button></div></div></section>';
@@ -114,7 +114,7 @@ function postHTML(p,idx){
   else {var q=p.q;sub=setName(q.set)+' ข้อ '+q.n;body='<div class="tag">QUIZ · '+esc(setName(q.set))+' ข้อ '+q.n+'</div><div class="qstem">'+q.stem+'</div>'+q.choices.map(function(c,j){return '<button class="choice" data-j="'+j+'"><span class="cl">'+L[j]+'</span>'+c+'</button>'}).join('');cap='<b>'+esc(who)+'</b> ตอบในโพสต์ได้เลย แล้วดูเฉลยในคอมเมนต์ 👇';}
   return '<article class="post" data-id="'+p.id+'"><div class="ph"><span class="av">IC</span><div class="who">'+esc(who)+'<small>'+esc(sub)+'</small></div></div>'+
    '<div class="pmedia"><img loading="lazy" src="'+photo(pi)+'" alt=""><div class="overlay">'+body+'</div></div>'+
-   '<div class="pbar"><button class="like'+(liked?' liked':'')+'">'+(liked?'♥':'♡')+'</button><button class="cm" title="เฉลย/คอมเมนต์">💬</button><button class="save" title="บันทึกไว้ทบทวน">'+(liked?'🔖':'📑')+'</button></div>'+
+   '<div class="pbar"><button class="like'+(liked?' liked':'')+'">'+(liked?'♥\uFE0E':'♡\uFE0E')+'</button><button class="cm" title="เฉลย/คอมเมนต์">💬</button><button class="save" title="บันทึกไว้ทบทวน">'+(liked?'🔖':'📑')+'</button></div>'+
    '<div class="pcap">'+cap+'</div><div class="comments"></div></article>';
 }
 function renderFeed(n){var f=$('#feed');if(!f)return;var h='';for(var i=0;i<n&&fpos<FEED.length;i++,fpos++)h+=postHTML(FEED[fpos],fpos);
@@ -126,17 +126,17 @@ function wirePost(el){var id=el.dataset.id,p=FEED.filter(function(x){return x.id
   var lastTap=0;$('.pmedia',el).addEventListener('click',function(e){if(e.target.closest('.choice'))return;var t=Date.now();if(t-lastTap<350){if(!S.liked[id])toggleLike(id,el)}lastTap=t});
   if(p&&p.type==='quiz'){$$('.choice',el).forEach(function(b){b.onclick=function(){answerInline(p.q,+b.dataset.j,el)}});
     $('.cm',el).onclick=function(){showExp(p.q,null,el)};}
-  else $('.cm',el).onclick=function(){var c=$('.comments',el);c.innerHTML='<div class="cmt"><span class="av">💕</span><div class="bub"><b>'+esc('ทีม '+(cheerName()||'ICgram'))+'</b> กดหัวใจเก็บโพสต์นี้ไว้ทบทวนในโปรไฟล์ได้นะ 💕</div></div>'};
+  else $('.cm',el).onclick=function(){var c=$('.comments',el);c.innerHTML='<div class="cmt"><span class="av">IC</span><div class="bub"><b>'+esc('ทีม '+(cheerName()||'ICgram'))+'</b> กดหัวใจเก็บโพสต์นี้ไว้ทบทวนในโปรไฟล์ได้นะ 🤍</div></div>'};
 }
 function findPost(id){if(id[0]==='Q')return{type:'quiz',id:id,q:QBY[id.slice(1)]};return null}
 function toggleLike(id,el){if(S.liked[id])delete S.liked[id];else S.liked[id]=Date.now();save();updLiked();
-  if(el){var b=$('.like',el),on=!!S.liked[id];b.textContent=on?'♥':'♡';b.classList.toggle('liked',on);$('.save',el).textContent=on?'🔖':'📑'}
+  if(el){var b=$('.like',el),on=!!S.liked[id];b.textContent=on?'♥\uFE0E':'♡\uFE0E';b.classList.toggle('liked',on);$('.save',el).textContent=on?'🔖':'📑'}
   toast(S.liked[id]?'บันทึกไว้ทบทวนแล้ว ♥':'เอาออกจากรายการแล้ว')}
 function answerInline(q,j,el){var bs=$$('.choice',el);if(bs[0].disabled)return;var ok=j===q.ans;record(q,ok);
   bs.forEach(function(b,k){b.disabled=true;if(k===q.ans)b.classList.add('correct');else if(k===j)b.classList.add('wrong')});showExp(q,ok,el)}
 function expHTML(q){return '<div>'+q.exp+'</div>'+(q.traps&&q.traps.some(Boolean)?'<div style="margin-top:6px"><b>ตัวลวงมาจากไหน:</b><ul style="margin:4px 0;padding-left:18px">'+q.traps.map(function(t,k){return t?'<li>ข้อ '+L[k]+': '+t+'</li>':''}).join('')+'</ul></div>':'')+(q.tip?'<span class="tnote">💡 '+q.tip+'</span>':'')+(q.note?'<span class="tnote">📝 '+q.note+'</span>':'')+'<span class="src">ที่มา: '+esc(q.src)+'</span>'}
 function showExp(q,ok,el){var c=$('.comments',el);var n=cheerName()||'ICgram';
-  c.innerHTML=(ok===null?'':'<div class="cmt"><span class="av">💕</span><div class="bub"><b>'+esc('ทีม '+n)+'</b> '+(ok?'ถูกต้อง! เก่งมาก 💖':'ยังไม่ใช่ ไม่เป็นไรนะ ข้อนี้เก็บไว้ในหน้า “ทบทวน” แล้ว')+'</div></div>')+
+  c.innerHTML=(ok===null?'':'<div class="cmt"><span class="av">IC</span><div class="bub"><b>'+esc('ทีม '+n)+'</b> '+(ok?'ถูกต้อง! เก่งมาก ✨':'ยังไม่ใช่ ไม่เป็นไรนะ ข้อนี้เก็บไว้ในหน้า “ทบทวน” แล้ว')+'</div></div>')+
   '<div class="cmt"><span class="av">✓</span><div class="bub"><b>เฉลย</b> ข้อ '+L[q.ans]+'<br>'+expHTML(q)+'</div></div>'}
 /* ---------- notes & stories ---------- */
 function openNote(i){var n=D.notes[i];modal('<h3 style="margin:0 0 6px">📝 โน้ตย่อ</h3><div>'+n.full+'</div><div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button></div>')}
@@ -162,7 +162,7 @@ document.addEventListener('keydown',function(e){if(!SV)return;if(e.key==='ArrowR
 /* ---------- READ ---------- */
 function readList(v){var acc=chapterAcc();
   var h='<div class="page"><h1>📖 อ่านเนื้อหา</h1><p class="muted">เรียงตามโครงสร้างข้อสอบ (หมวด 1 พื้นฐาน → หมวด 2 กฎ/จรรยาบรรณ → หมวด 3 ผลิตภัณฑ์) ข้างในแต่ละบทเรียงจากง่ายไปยาก: สรุปสั้น → สไลด์ติว → ใบสรุป → ข้อสอบ</p>'+
-  '<div class="card tap" id="toF"><div class="row"><div class="thumb" style="background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px">∑</div><div><b>ชีตสรุปสูตร IC P1</b><div class="muted">สูตรทั้งหมดพร้อมความหมายตัวแปรและตัวอย่าง (จุดอ่อนของเรา → อ่านบ่อยๆ)</div></div></div></div>'+
+  '<div class="card tap" id="toF"><div class="row"><div class="thumb ico-sum">∑</div><div><b>ชีตสรุปสูตร IC P1</b><div class="muted">สูตรทั้งหมดพร้อมความหมายตัวแปรและตัวอย่าง (จุดอ่อนของเรา → อ่านบ่อยๆ)</div></div></div></div>'+
   '<div class="card tap" id="toInfo"><div class="row"><img class="thumb" src="'+thumb(5)+'"><div><b>โครงสร้างข้อสอบ</b><div class="muted">'+D.examInfo.short+'</div></div></div></div>';
   D.parts.forEach(function(p){h+='<div class="part-h"><span class="pill">หมวด '+p.id+'</span>'+esc(p.title)+' <span class="muted">('+p.count+' ข้อ)</span></div>';
     D.chapters.filter(function(c){return c.part===p.id}).forEach(function(c,i){var a=acc[c.id],pct=a?Math.round(100*a.c/(a.c+a.w)):null;
@@ -231,7 +231,7 @@ function finish(){clearInterval(clockT);if(!QZ)return;var tot=QZ.qs.length,c=0,a
   $('#again').onclick=function(){QZ.i=0;QZ.ans={};QZ.t0=Date.now();go('run')};$('#toRev').onclick=function(){go('review')};$('#toHome').onclick=function(){go('home')};}
 /* ---------- REVIEW ---------- */
 function review(v){var ids=Object.keys(S.wrong).sort(function(a,b){return S.wrong[b]-S.wrong[a]});
-  var h='<div class="page"><h1>↻ ทบทวนข้อที่ผิด</h1><p class="muted">ตอบถูกเมื่อไหร่ ข้อนั้นจะหายจากรายการเอง · '+ids.length+' ข้อ</p>'+(ids.length?'<button class="btn pri" id="redo">ทำข้อที่ผิดทั้งหมดอีกรอบ</button>':'<div class="card">ยังไม่มีข้อที่ผิด เก่งมาก! หรือยังไม่ได้เริ่มทำ ลองไปที่แท็บ “ข้อสอบ” นะ 💕</div>');
+  var h='<div class="page"><h1>↻ ทบทวนข้อที่ผิด</h1><p class="muted">ตอบถูกเมื่อไหร่ ข้อนั้นจะหายจากรายการเอง · '+ids.length+' ข้อ</p>'+(ids.length?'<button class="btn pri" id="redo">ทำข้อที่ผิดทั้งหมดอีกรอบ</button>':'<div class="card">ยังไม่มีข้อที่ผิด เก่งมาก! หรือยังไม่ได้เริ่มทำ ลองไปที่แท็บ “ข้อสอบ” นะ 🤍</div>');
   ids.forEach(function(id){var q=QBY[id];if(!q)return;h+='<div class="card"><div class="muted">'+esc(setName(q.set))+' ข้อ '+q.n+' · บท '+esc(chTitle(q.ch))+'</div><div class="qstem">'+q.stem+'</div>'+q.choices.map(function(c,j){return '<div class="choice'+(j===q.ans?' correct':'')+'"><span class="cl">'+L[j]+'</span>'+c+'</div>'}).join('')+'<details><summary>ดูเฉลย</summary><div class="exp">'+expHTML(q)+'</div></details></div>'});
   v.innerHTML=h+'</div>';var r=$('#redo');if(r)r.onclick=function(){startQuiz({mode:'wrong'})};}
 /* ---------- PROFILE / LIKED ---------- */
@@ -247,7 +247,7 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
   var h='<div class="prof"><div class="ring"><img src="'+thumb(0)+'"></div><div class="pst"><div><b>'+tot+'</b><span>ชุดข้อสอบ</span></div><div><b>'+(nC+nW?Math.round(100*nC/(nC+nW))+'%':'–')+'</b><span>ตอบถูกรวม</span></div><div><b>'+it.length+'</b><span>บันทึก</span></div></div></div>'+
   '<div class="page" style="padding-top:0"><b>'+esc(ME)+'</b> · ติวสอบ IC Plain (P1)'+(ART?' · ทีม '+esc(NAMES.join(' / ')||ART):'')+'<div class="muted">เป้าหมาย ≥ '+PASS+'% · อ่านวันอาทิตย์ทีละนิดก็ถึงได้</div>'+
   '<h2>คะแนนสูงสุด</h2>'+Object.keys(D.sets).concat(['mix']).map(function(k){var p=S.best[k];return '<div class="bar2"><span class="lbl">'+esc(k==='mix'?'สุ่มรวม':D.sets[k].title)+'</span><div class="prog"><i style="width:'+(p||0)+'%"></i></div><span class="pc">'+(p!=null?p+'%':'–')+'</span></div>'}).join('')+
-  '<h2>ความแม่นรายบท</h2>'+(Object.keys(acc).length?D.chapters.filter(function(c){return acc[c.id]}).map(function(c){var a=acc[c.id],p=Math.round(100*a.c/(a.c+a.w));return '<div class="bar2"><span class="lbl">'+esc(c.id+' '+c.title)+'</span><div class="prog"><i style="width:'+p+'%;'+(p<PASS?'background:#ff8fa8':'')+'"></i></div><span class="pc">'+p+'%</span></div>'}).join(''):'<p class="muted">ยังไม่มีข้อมูล</p>')+
+  '<h2>ความแม่นรายบท</h2>'+(Object.keys(acc).length?D.chapters.filter(function(c){return acc[c.id]}).map(function(c){var a=acc[c.id],p=Math.round(100*a.c/(a.c+a.w));return '<div class="bar2"><span class="lbl">'+esc(c.id+' '+c.title)+'</span><div class="prog"><i style="width:'+p+'%;'+(p<PASS?'background:var(--bad)':'')+'"></i></div><span class="pc">'+p+'%</span></div>'}).join(''):'<p class="muted">ยังไม่มีข้อมูล</p>')+
   '<h2>ข้อที่ผิดค้างอยู่</h2><button class="btn" id="toRev">ดู '+Object.keys(S.wrong).length+' ข้อในหน้าทบทวน</button>'+
   '<h2>โพสต์ที่บันทึก</h2></div>'+(it.length?gridHTML(it):'<div class="page"><p class="muted">ยังไม่มี กดหัวใจในฟีดได้เลย</p></div>')+
   '<div class="page bak"><h2>สำรองความคืบหน้า</h2><p class="muted">คัดลอกรหัสนี้ไปวางในหน้าโปรไฟล์ของเครื่องอื่น เช่น จาก iPhone ไป iPad ไม่ต้องสมัครบัญชี</p><textarea class="bak-code" id="bakOut" readonly rows="4"></textarea><div class="bak-actions"><button class="btn pri sm" id="bakCopy">คัดลอก</button><button class="btn sm" id="bakShare" hidden>แชร์</button></div>'+
