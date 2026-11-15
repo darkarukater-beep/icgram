@@ -147,6 +147,11 @@ function tone(seed){return (typeof seed==='number'?Math.abs(seed):hash(String(se
 function tileHTML(cls,label,seed){return '<div class="'+(cls||'')+' ph-tile tone-'+tone(seed)+'" aria-hidden="true">'+(label?('<span>'+esc(label)+'</span>'):'')+'</div>'}
 function headCrop(i){var p=D.photos[pidx(i)];if(!p||!p.fc||!p.w)return null;var w=p.w,h=p.h,F=p.fc[2]*h,S=Math.min(w,h,F*3.2),cx=p.fc[0]*w,top=p.fc[1]*h-F*0.8,left=cx-S/2;
   left=Math.max(0,Math.min(w-S,left));top=Math.max(0,Math.min(h-S,top));return {S:S,w:w,h:h,l:left,t:top,big:S<w*0.6}}
+function noteAvStyle(n){var c=headCrop(n);return c?'width:'+(c.w/c.S*100).toFixed(2)+'%;left:'+(-c.l/c.S*100).toFixed(2)+'%;top:'+(-c.t/c.S*100).toFixed(2)+'%':'width:100%;height:100%;left:0;top:0;object-fit:cover'}
+function noteAv(n){if(getPrivacy())return tileHTML('thumb','',n);return '<span class="thumb tz"><img class="artist nimg" loading="eager" decoding="async" data-n="'+n+'" src="'+thumb(n)+'" style="'+noteAvStyle(n)+'" alt=""></span>'}
+function noteAvFix(root){$$('img.nimg',root).forEach(function(im){var tries=0;im.onerror=function(){if(getPrivacy())return;tries++;if(tries>3)return;var n=+im.dataset.n;
+  if(tries===1){im.src=photo(n);return}var m=FP[(n+tries*11)%FP.length];im.dataset.n=m;im.setAttribute('style',noteAvStyle(m));im.src=thumb(m)};
+  if(im.complete&&!im.naturalWidth)im.onerror()})}
 function thumbHTML(seed,label){if(getPrivacy())return tileHTML('thumb',label||'IC',seed);var n=typeof seed==='number'?seed:hash(String(seed)),c=headCrop(n);
   if(!c)return '<img class="thumb artist" loading="lazy" src="'+thumb(n)+'"'+posStyle(n)+' alt="">';
   return '<span class="thumb tz"><img class="artist" loading="lazy" src="'+(c.big?photo(n):thumb(n))+'" style="width:'+(c.w/c.S*100).toFixed(2)+'%;left:'+(-c.l/c.S*100).toFixed(2)+'%;top:'+(-c.t/c.S*100).toFixed(2)+'%" alt=""></span>'}
@@ -177,9 +182,9 @@ applyTheme(getTheme());
 var heroT=null;function stopHero(){if(heroT){clearInterval(heroT);heroT=null}}
 function home(v){
   // notes
-  var NAV=[];for(var q=0;q<D.photos.length&&NAV.length<D.notes.length;q+=7){if(headCrop(q))NAV.push(q)}
+  var NAV=[];for(var q=0;q<D.photos.length&&NAV.length<D.notes.length;q+=7){for(var r=q;r<q+7&&r<D.photos.length;r++){var hc=headCrop(r);if(hc&&!hc.big){NAV.push(r);break}}}
   var notes='<div class="notes ign" aria-label="โน้ต">'+D.notes.map(function(n,i){var sd=NAV.length?NAV[i%NAV.length]:i;
-    return '<button type="button" class="note" data-i="'+i+'" style="--d:'+(i%4*0.6).toFixed(1)+'s"><span class="nbub"><span class="ntx">'+n.short+'</span><i class="nt1"></i><i class="nt2"></i></span><span class="nav">'+thumbHTML(sd,' ')+'</span><span class="nlb">โน้ต '+(i+1)+'</span></button>'}).join('')+'</div>';
+    return '<button type="button" class="note" data-i="'+i+'" style="--d:'+(i%4*0.6).toFixed(1)+'s"><span class="nbub"><span class="ntx">'+n.short+'</span><i class="nt1"></i><i class="nt2"></i></span><span class="nav">'+noteAv(sd)+'</span><span class="nlb">โน้ต '+(i+1)+'</span></button>'}).join('')+'</div>';
   // stories: chapters + formula decks
   var st='<div class="stories">'+D.stories.map(function(s,i){
     var inner=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,8),i):'<img loading="lazy" class="artist" src="'+thumb(s.photo)+'"'+posStyle(s.photo)+' alt="">';
@@ -194,7 +199,7 @@ function home(v){
    '<div class="weak">'+(wk.length?'<b>หัวข้อที่ควรทวน:</b><br>'+wk.map(function(w){return '<button class="chip" data-ch="'+w.ch+'">'+esc(chTitle(w.ch))+' · '+w.pct+'%</button>'}).join(''):'<span class="muted">ทำข้อสอบสักชุด แล้วระบบจะบอกหัวข้อที่ควรทวนให้ตรงนี้</span>')+
    '<div style="margin-top:8px"><button class="btn pri sm" id="goQuiz">เริ่มทำข้อสอบ</button><button class="btn sm" id="goRead">อ่านเนื้อหา</button><button class="btn sm" id="goF">ชีตสูตร</button><button class="btn sm" id="goL">เข้าใจโจทย์</button><button class="btn sm" id="goG">เกม</button></div></div></section>';
   v.innerHTML=notes+st+dash+'<div id="feed"></div><button class="morebtn" id="more">โหลดโพสต์เพิ่ม</button>';
-  $$('.note',v).forEach(function(e){e.onclick=function(){openNote(+e.dataset.i)}});
+  $$('.note',v).forEach(function(e){e.onclick=function(){openNote(+e.dataset.i)}});noteAvFix(v);
   $$('.st',v).forEach(function(e){e.onclick=function(){openStory(+e.dataset.s)}});
   $$('.chip[data-ch]',v).forEach(function(e){e.onclick=function(){go('chapter',e.dataset.ch)}});
   $('#goQuiz').onclick=function(){go('quiz')};$('#goRead').onclick=function(){go('read')};$('#goF').onclick=function(){go('formula','sheet')};$('#goL').onclick=function(){go('formula','learn')};$('#goG').onclick=function(){go('games')};
