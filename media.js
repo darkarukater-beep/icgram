@@ -124,7 +124,9 @@ function fit(){if(!R.box)return;var tb=$('#topbar'),nv=$('#bottomnav');var top=t
   R.box.style.top=Math.max(0,top)+'px';R.box.style.bottom=bot+'px';var bar=$('#reelBar');if(bar)bar.style.top=(Math.max(0,top)+8)+'px';var pl=$('#reelPull');if(pl)pl.style.top=(Math.max(0,top)+6)+'px';
   var rr=$('#reelResume');if(rr)rr.style.top=(Math.max(0,top)+52)+'px'}
 function refreshReels(){R.order=shuffled(M.reels.length);if(R.v)reels(R.v);if(R.box)R.box.scrollTop=0;toast(R.filter==='liked'?'สุ่มลำดับรีลที่ชอบใหม่แล้ว':'สุ่มลำดับรีลใหม่แล้ว')}
-function burst(sec){var b=document.createElement('div');b.className='heart-burst';b.innerHTML=HEART_F;sec.appendChild(b);setTimeout(function(){if(b.parentNode)b.parentNode.removeChild(b)},900)}
+function burst(sec,x,y){var b=document.createElement('div');b.className='heart-burst';b.innerHTML=HEART_F;var r=sec.getBoundingClientRect();
+  b.style.left=(x==null?r.width/2:x-r.left)+'px';b.style.top=(y==null?r.height/2:y-r.top)+'px';b.style.setProperty('--r',(Math.random()*30-15).toFixed(1)+'deg');
+  sec.appendChild(b);setTimeout(function(){if(b.parentNode)b.parentNode.removeChild(b)},1000)}
 function paintLike(sec,on){var b=$('.reel-like',sec);if(!b)return;b.innerHTML=on?HEART_F:HEART_O;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));b.setAttribute('aria-label',on?'เลิกถูกใจ':'ถูกใจ');updCount()}
 function updCount(){var n=Object.keys(likes()).length,c=$('#reelLikedN');if(c)c.textContent=n?String(n):''}
 function reels(v){reelsLeave();R.v=v;document.body.classList.add('in-reels');
@@ -158,8 +160,8 @@ function reels(v){reelsLeave();R.v=v;document.body.classList.add('in-reels');
     vd.addEventListener('loadedmetadata',function(){s.classList.toggle('land',vd.videoWidth/vd.videoHeight>0.75);$('.reel-fs',s).classList.toggle('hidden',!(vd.videoWidth>vd.videoHeight))});
     $('.reel-fs',s).onclick=function(e){e.stopPropagation();enterFs(vd,s)};
     vd.addEventListener('webkitendfullscreen',function(){exitFs(s,vd)});
-    $('.reel-tap',s).onclick=function(){var t=Date.now();
-      if(t-last<300){clearTimeout(single);single=null;last=0;if(!likes()[id]){setLike(id,true);paintLike(s,true)}burst(s);return}
+    $('.reel-tap',s).onclick=function(ev){var t=Date.now();
+      if(t-last<320){clearTimeout(single);single=null;last=t;if(!likes()[id]){setLike(id,true);paintLike(s,true)}burst(s,ev.clientX,ev.clientY);return}
       last=t;single=setTimeout(function(){single=null;if(vd.paused){playReel(vd)}else{vd.pause();$('.reel-paused',s).classList.remove('hidden')}},300)};
     $('.reel-like',s).onclick=function(e){e.stopPropagation();var on=setLike(id,!likes()[id]);paintLike(s,on);if(on)burst(s)};
     $('.reel-mute',s).onclick=function(e){e.stopPropagation();R.muted=!R.muted;secs.forEach(function(x){var y=$('video',x);y.muted=R.muted});updMute();if(!R.muted){if(vd.paused)playReel(vd);musicDuck()}};
