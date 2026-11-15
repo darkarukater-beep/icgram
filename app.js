@@ -94,7 +94,8 @@ function parseBackup(raw){raw=String(raw||'').replace(/\s+/g,'');if(!raw)throw n
   var p=JSON.parse(json);var d=p&&(p.d||p.data);if(!d||typeof d!=='object')throw new Error('shape');
   var keys=Object.keys(d).filter(function(k){return k.indexOf('icgram')===0});if(!keys.length)throw new Error('keys');
   return {d:d,keys:keys}}
-function mergeVal(k,inc){if(k!==KEY||!inc||typeof inc!=='object'||Array.isArray(inc))return inc;
+function mergeVal(k,inc){if(k==='icgram_learn'&&window.LEARN&&inc&&typeof inc==='object'){var lc;try{lc=JSON.parse(localStorage.getItem(k))}catch(e){lc=null}return window.LEARN.merge(lc,inc)}
+  if(k!==KEY||!inc||typeof inc!=='object'||Array.isArray(inc))return inc;
   var cur=S||{}, out={};
   var att=(cur.attempts||[]).concat(inc.attempts||[]), seen={}, uniq=[];
   for(var i=0;i<att.length;i++){var a=att[i]||{}, id=[a.date,a.key,a.score,a.total,a.pct].join('|');if(seen[id])continue;seen[id]=1;uniq.push(a)}
@@ -105,7 +106,7 @@ function mergeVal(k,inc){if(k!==KEY||!inc||typeof inc!=='object'||Array.isArray(
   out.wrong=unionTime(cur.wrong,inc.wrong);out.liked=unionTime(cur.liked,inc.liked);out.seen=unionTime(cur.seen,inc.seen);
   out.answered={};[cur.answered,inc.answered].forEach(function(src){if(!src)return;Object.keys(src).forEach(function(x){out.answered[x]=src[x]})});
   out.timer=(inc.timer!=null)?inc.timer:cur.timer;return out}
-function applyBackup(d){Object.keys(d).forEach(function(k){if(k.indexOf('icgram')!==0)return;var val=mergeVal(k,d[k]);localStorage.setItem(k,typeof val==='string'?val:JSON.stringify(val))});load()}
+function applyBackup(d){Object.keys(d).forEach(function(k){if(k.indexOf('icgram')!==0)return;var val=mergeVal(k,d[k]);localStorage.setItem(k,typeof val==='string'?val:JSON.stringify(val))});load();if(window.LEARN)window.LEARN.reload()}
 function copyText(s,okMsg){function done(){toast(okMsg||'คัดลอกแล้ว')}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(s).then(done).catch(fallback)}else fallback();
   function fallback(){var t=$('#bakOut');if(t){t.focus();t.select();try{document.execCommand('copy');done()}catch(e){toast('คัดลอกไม่สำเร็จ ลองเลือกข้อความเอง')}}}}
@@ -168,12 +169,12 @@ function home(v){
   var dash='<section class="dash"><div class="hero'+(getPrivacy()?' privacy-hero':'')+'">'+heroInner+'<div class="htxt"><h2>'+'สู้ๆ นะ '+esc(ME)+'! 🤍'+'</h2><p>ICgram'+(artistOn()?' · ธีม '+esc(ART):'')+' · เป้าหมาย: สอบ IC Plain (P1) ผ่าน ≥ '+PASS+'% · วันนี้อ่านนิด ทำข้อสอบหน่อยก็พอ</p></div></div>'+
    '<div class="stats"><div><b>'+tot+'</b><span>ชุดที่ทำแล้ว</span></div><div><b>'+ans+'/'+D.questions.length+'</b><span>ข้อที่เคยตอบ</span></div><div><b>'+(tot?best+'%':'–')+'</b><span>คะแนนสูงสุด</span></div></div>'+
    '<div class="weak">'+(wk.length?'<b>หัวข้อที่ควรทวน:</b><br>'+wk.map(function(w){return '<button class="chip" data-ch="'+w.ch+'">'+esc(chTitle(w.ch))+' · '+w.pct+'%</button>'}).join(''):'<span class="muted">ทำข้อสอบสักชุด แล้วระบบจะบอกหัวข้อที่ควรทวนให้ตรงนี้</span>')+
-   '<div style="margin-top:8px"><button class="btn pri sm" id="goQuiz">เริ่มทำข้อสอบ</button><button class="btn sm" id="goRead">อ่านเนื้อหา</button><button class="btn sm" id="goF">ชีตสูตร</button></div></div></section>';
+   '<div style="margin-top:8px"><button class="btn pri sm" id="goQuiz">เริ่มทำข้อสอบ</button><button class="btn sm" id="goRead">อ่านเนื้อหา</button><button class="btn sm" id="goF">ชีตสูตร</button><button class="btn sm" id="goL">เข้าใจโจทย์</button></div></div></section>';
   v.innerHTML=notes+st+dash+'<div id="feed"></div><button class="morebtn" id="more">โหลดโพสต์เพิ่ม</button>';
   $$('.note',v).forEach(function(e){e.onclick=function(){openNote(+e.dataset.i)}});
   $$('.st',v).forEach(function(e){e.onclick=function(){openStory(+e.dataset.s)}});
   $$('.chip[data-ch]',v).forEach(function(e){e.onclick=function(){go('chapter',e.dataset.ch)}});
-  $('#goQuiz').onclick=function(){go('quiz')};$('#goRead').onclick=function(){go('read')};$('#goF').onclick=function(){go('formula')};
+  $('#goQuiz').onclick=function(){go('quiz')};$('#goRead').onclick=function(){go('read')};$('#goF').onclick=function(){go('formula','sheet')};$('#goL').onclick=function(){go('formula','learn')};
   if(!getPrivacy()){var k=1;heroT=setInterval(function(){var a=$('#h1'),b=$('#h2');if(!a){stopHero();return}k++;var top=(k%2)?a:b,bot=(k%2)?b:a;bot.src=photo(rnd(D.photos.length));setTimeout(function(){bot.style.opacity=1;top.style.opacity=0},300)},5000)}
   buildFeed();renderFeed(12);$('#more').onclick=function(){renderFeed(10)};
 }
@@ -249,12 +250,13 @@ document.addEventListener('keydown',function(e){if(!SV)return;if(e.key==='ArrowR
 function readList(v){var acc=chapterAcc();
   var h='<div class="page"><h1>📖 อ่านเนื้อหา</h1><p class="muted">เรียงตามโครงสร้างข้อสอบ (หมวด 1 พื้นฐาน → หมวด 2 กฎ/จรรยาบรรณ → หมวด 3 ผลิตภัณฑ์) ข้างในแต่ละบทเรียงจากง่ายไปยาก: สรุปสั้น → สไลด์ติว → ใบสรุป → ข้อสอบ</p>'+
   '<div class="card tap" id="toF"><div class="row"><div class="thumb ico-sum">∑</div><div><b>ชีตสรุปสูตร IC P1</b><div class="muted">สูตรทั้งหมดพร้อมความหมายตัวแปรและตัวอย่าง (จุดอ่อนของเรา → อ่านบ่อยๆ)</div></div></div></div>'+
+  '<div class="card tap" id="toL"><div class="row"><div class="thumb ico-sum">✎</div><div><b>เข้าใจโจทย์ทีละสูตร</b><div class="muted">แนวคิด → ตัวแปร → ตัวอย่าง → ทำด้วยกัน → ทำเอง → ทบทวน'+(window.LEARN?' · ผ่านแล้ว '+window.LEARN.passedCount()+'/'+window.LEARN.total:'')+'</div></div></div></div>'+
   '<div class="card tap" id="toInfo"><div class="row">'+thumbHTML(5,'ข้อสอบ')+'<div><b>โครงสร้างข้อสอบ</b><div class="muted">'+D.examInfo.short+'</div></div></div></div>';
   D.parts.forEach(function(p){h+='<div class="part-h"><span class="pill">หมวด '+p.id+'</span>'+esc(p.title)+' <span class="muted">('+p.count+' ข้อ)</span></div>';
     D.chapters.filter(function(c){return c.part===p.id}).forEach(function(c,i){var a=acc[c.id],pct=a?Math.round(100*a.c/(a.c+a.w)):null;
       h+='<div class="card tap" data-ch="'+c.id+'"><div class="row">'+thumbHTML(hash(c.id),c.id)+'<div style="flex:1;min-width:0"><b>บท '+c.id+' '+esc(c.title)+'</b><div class="muted">ออกสอบ ~'+c.n+' ข้อ · ข้อสอบฝึกในเว็บ '+c.qcount+' ข้อ'+(pct!==null?' · ตอบถูก '+pct+'%':'')+'</div>'+(pct!==null?'<div class="prog"><i style="width:'+pct+'%"></i></div>':'')+'</div></div></div>'})});
   v.innerHTML=h+'</div>';
-  $('#toF').onclick=function(){go('formula')};$('#toInfo').onclick=function(){modal(D.examInfo.full+'<div style="margin-top:10px"><button class="btn pri" id="mclose">ปิด</button></div>')};
+  $('#toF').onclick=function(){go('formula','sheet')};$('#toL').onclick=function(){go('formula','learn')};$('#toInfo').onclick=function(){modal(D.examInfo.full+'<div style="margin-top:10px"><button class="btn pri" id="mclose">ปิด</button></div>')};
   $$('.card[data-ch]',v).forEach(function(e){e.onclick=function(){go('chapter',e.dataset.ch)}});}
 function chapter(v,id){var c=CHBY[id];var tabs=[['kp','สรุปสั้น']];if(c.slides.length)tabs.push(['sl','สไลด์ติว ('+c.slides.length+')']);tabs.push(['sh','ใบสรุป อ.ยีน']);if(c.book.length)tabs.push(['bk','หนังสือสรุป ('+c.book.length+' หน้า)']);tabs.push(['qz','ข้อสอบบทนี้ ('+c.qcount+')']);
   v.innerHTML='<div class="page"><button class="btn sm" id="back">← กลับ</button><h1>บท '+c.id+' '+esc(c.title)+'</h1><div class="muted">หมวด '+c.part+' · ออกสอบประมาณ '+c.n+' ข้อ</div><div class="seg">'+tabs.map(function(t,i){return '<button data-t="'+t[0]+'"'+(i?'':' class="on"')+'>'+t[1]+'</button>'}).join('')+'</div><div id="chbody"></div></div>';
@@ -267,7 +269,16 @@ function chapter(v,id){var c=CHBY[id];var tabs=[['kp','สรุปสั้น'
     else {startQuiz({mode:'ch',ch:c.id});return}
     var q2=$('#qz2');if(q2)q2.onclick=function(){startQuiz({mode:'ch',ch:c.id})};}
   $$('.seg button',v).forEach(function(b){b.onclick=function(){show(b.dataset.t)}});show('kp');}
-function formulaPage(v){v.innerHTML='<div class="page fsheet"><button class="btn sm" id="back">← กลับ</button>'+D.formulaSheet+'</div>';$('#back').onclick=function(){go('read')}}
+var FTAB=(function(){try{return sessionStorage.getItem('icg-ftab')||'sheet'}catch(e){return 'sheet'}})();
+function formulaPage(v,arg){if(arg==='learn'||arg==='sheet')FTAB=arg;
+  v.innerHTML='<div class="page ftabs-page"><div class="ftabs"><button class="btn sm" id="back">← กลับ</button><div class="seg" id="fseg"><button type="button" data-ft="sheet">สรุปสูตร</button><button type="button" data-ft="learn">เข้าใจโจทย์</button></div></div><div id="fbody"></div></div>';
+  $('#back').onclick=function(){if(FTAB==='learn'&&window.ICLearn&&ICLearn.isOpen()){ICLearn.reset();showF('learn');window.scrollTo(0,0);return}go('read')};
+  function showF(t){FTAB=t;try{sessionStorage.setItem('icg-ftab',t)}catch(e){}
+    $$('#fseg button').forEach(function(b){b.classList.toggle('on',b.dataset.ft===t)});var b=$('#fbody');
+    if(t==='learn'&&window.ICLearn){ICLearn.render(b,{esc:esc,toast:toast,cheer:function(ok){return cheer(ok)}})}
+    else{b.innerHTML='<div class="fsheet">'+D.formulaSheet+'</div>'}}
+  $$('#fseg button').forEach(function(b){b.onclick=function(){if(b.dataset.ft===FTAB&&!(FTAB==='learn'&&window.ICLearn&&ICLearn.isOpen()))return;if(window.ICLearn&&b.dataset.ft==='learn'&&FTAB==='learn')ICLearn.reset();showF(b.dataset.ft);window.scrollTo(0,0)}});
+  showF(FTAB==='learn'&&window.ICLearn?'learn':'sheet');}
 /* ---------- QUIZ ---------- */
 var QZ=null;
 function quizHome(v){var b=function(k){return S.best[k]!=null?' · ดีที่สุด '+S.best[k]+'%':''};
@@ -336,6 +347,7 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
   '<h2>ธีม</h2><div class="seg" id="themeSeg"><button type="button" data-theme-set="dark">โทนดำ</button><button type="button" data-theme-set="light">โทนขาว</button></div><p class="muted">ใช้โทนเดียวกันทั้งเว็บ ระบบจำค่าที่เลือกไว้ให้</p>'+
   '<h2>โหมดส่วนตัว</h2><div class="seg" id="privacySeg"><button type="button" data-privacy-set="off">แสดงรูป</button><button type="button" data-privacy-set="on">ซ่อนรูปศิลปิน</button></div><p class="muted">เวลาอ่านข้างนอก ซ่อนรูปและชื่อศิลปินได้ ระบบจำค่าที่เลือกไว้ให้ และรวมในรหัสสำรองด้วย</p>'+
   '<h2>คะแนนสูงสุด</h2>'+Object.keys(D.sets).concat(['mix']).map(function(k){var p=S.best[k];return '<div class="bar2"><span class="lbl">'+esc(k==='mix'?'สุ่มรวม':D.sets[k].title)+'</span><div class="prog"><i style="width:'+(p||0)+'%"></i></div><span class="pc">'+(p!=null?p+'%':'–')+'</span></div>'}).join('')+
+  (window.LEARN?'<h2>เข้าใจโจทย์</h2><div class="bar2"><span class="lbl">สูตรที่ผ่านแล้ว</span><div class="prog"><i style="width:'+Math.round(100*window.LEARN.passedCount()/window.LEARN.total)+'%"></i></div><span class="pc">'+window.LEARN.passedCount()+'/'+window.LEARN.total+'</span></div>':'')+
   '<h2>ความแม่นรายบท</h2>'+(Object.keys(acc).length?D.chapters.filter(function(c){return acc[c.id]}).map(function(c){var a=acc[c.id],p=Math.round(100*a.c/(a.c+a.w));return '<div class="bar2"><span class="lbl">'+esc(c.id+' '+c.title)+'</span><div class="prog"><i style="width:'+p+'%;'+(p<PASS?'background:var(--bad)':'')+'"></i></div><span class="pc">'+p+'%</span></div>'}).join(''):'<p class="muted">ยังไม่มีข้อมูล</p>')+
   '<h2>ข้อที่ผิดค้างอยู่</h2><button class="btn" id="toRev">ดู '+Object.keys(S.wrong).length+' ข้อในหน้าทบทวน</button>'+
   '<h2>โพสต์ที่บันทึก</h2></div>'+(it.length?gridHTML(it):'<div class="page"><p class="muted">ยังไม่มี กดหัวใจในฟีดได้เลย</p></div>')+
@@ -353,7 +365,7 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
   $('#bakLoad').onclick=function(){var raw=$('#bakIn').value;var parsed;try{parsed=parseBackup(raw)}catch(e){toast('รหัสไม่ถูกต้อง');return}
     if(!confirm('รวมความคืบหน้าจากรหัสนี้เข้าเครื่องนี้? คะแนนสูงสุดจะเก็บค่าที่ดีกว่า และประวัติข้อสอบจะถูกรวมกัน'))return;
     try{applyBackup(parsed.d);toast('โหลดแล้ว');location.reload()}catch(e){toast('โหลดไม่สำเร็จ')}};
-  $('#reset').onclick=function(){if(confirm('ล้างคะแนน ประวัติ และรายการบันทึกทั้งหมด?')){localStorage.removeItem(KEY);load();updLiked();go('profile')}};}
+  $('#reset').onclick=function(){if(confirm('ล้างคะแนน ประวัติ ความคืบหน้าเข้าใจโจทย์ และรายการบันทึกทั้งหมด?')){localStorage.removeItem(KEY);localStorage.removeItem('icgram_learn');if(window.LEARN)window.LEARN.reload();if(window.ICLearn)ICLearn.reset();load();updLiked();go('profile')}};}
 /* ---------- calculator ---------- */
 function calcEval(str){
   var s=String(str||'').replace(/\s+/g,'').replace(/×/g,'*').replace(/[÷／]/g,'/').replace(/[−–]/g,'-');
