@@ -33,7 +33,7 @@ function bestText(k,g){var b=g.best;if(k==='match')return b.matchTime!=null?('�
   var w=g.word;return w.played?('ชนะ '+w.won+'/'+w.played+' · ติดกัน '+w.streak):'ยังไม่เคยเล่น'}
 function menu(v){var g=G();
   var h='<div class="page g-page"><h1>เกม</h1><p class="muted">ฝึกสูตรและข้อสอบ IC P1 แบบสนุกขึ้น · คะแนนสูงสุดรวมอยู่ในรหัสสำรองด้วย</p><div class="g-grid">';
-  GAMES.forEach(function(x,i){h+='<button type="button" class="g-card" data-g="'+x[0]+'"><span class="g-art">'+art(31+i*17,'g-art-img')+'<span class="g-ico">'+['⇄','⚡','∑','Aa'][i]+'</span></span><span class="g-tx"><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small><em>'+esc(bestText(x[0],g))+'</em></span></button>'});
+  GAMES.forEach(function(x,i){h+='<button type="button" class="g-card" data-g="'+x[0]+'"><span class="g-art">'+art([31,48,24,82][i],'g-art-img')+'<span class="g-ico">'+['⇄','⚡','∑','Aa'][i]+'</span></span><span class="g-tx"><b>'+esc(x[1])+'</b><small>'+esc(x[2])+'</small><em>'+esc(bestText(x[0],g))+'</em></span></button>'});
   v.innerHTML=h+'</div></div>';
   $$('[data-g]',v).forEach(function(b){b.onclick=function(){C.go('games',b.dataset.g)}})}
 
