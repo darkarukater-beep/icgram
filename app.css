@@ -176,3 +176,7 @@ img{max-width:100%}
 .katex-display{overflow-x:auto;overflow-y:hidden;padding:2px 0}
 .result .rphoto{max-height:44vh;object-position:top}
 .exp .katex-display,.bub .katex-display{font-size:.92em}
+
+.bak .bak-code{display:block;width:100%;box-sizing:border-box;min-height:88px;margin:8px 0;padding:8px 10px;border:1.5px solid var(--line);border-radius:14px;background:#fff;font-size:12px;line-height:1.4;word-break:break-all;resize:vertical;color:var(--ink)}
+.bak .bak-code:focus{outline:0;border-color:var(--pink)}
+.bak-actions{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 8px}

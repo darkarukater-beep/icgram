@@ -14,6 +14,31 @@ function load(){try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){S={}}
   S.attempts=S.attempts||[];S.best=S.best||{};S.stats=S.stats||{};S.wrong=S.wrong||{};S.liked=S.liked||{};S.seen=S.seen||{};S.answered=S.answered||{};}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 load();
+
+function icgStore(){var o={};for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.indexOf('icgram')===0){var v=localStorage.getItem(k);try{o[k]=JSON.parse(v)}catch(e){o[k]=v}}}return o}
+function b64e(s){return btoa(unescape(encodeURIComponent(s)))}
+function b64d(s){return decodeURIComponent(escape(atob(s)))}
+function backupCode(){return 'ICG1.'+b64e(JSON.stringify({v:1,t:Date.now(),d:icgStore()}))}
+function parseBackup(raw){raw=String(raw||'').replace(/\s+/g,'');if(!raw)throw new Error('empty');
+  var json;if(raw.indexOf('ICG1.')===0){json=b64d(raw.slice(5))}else{try{json=b64d(raw)}catch(e){json=raw}}
+  var p=JSON.parse(json);var d=p&&(p.d||p.data);if(!d||typeof d!=='object')throw new Error('shape');
+  var keys=Object.keys(d).filter(function(k){return k.indexOf('icgram')===0});if(!keys.length)throw new Error('keys');
+  return {d:d,keys:keys}}
+function mergeVal(k,inc){if(k!==KEY||!inc||typeof inc!=='object'||Array.isArray(inc))return inc;
+  var cur=S||{}, out={};
+  var att=(cur.attempts||[]).concat(inc.attempts||[]), seen={}, uniq=[];
+  for(var i=0;i<att.length;i++){var a=att[i]||{}, id=[a.date,a.key,a.score,a.total,a.pct].join('|');if(seen[id])continue;seen[id]=1;uniq.push(a)}
+  out.attempts=uniq;
+  out.best={};[cur.best,inc.best].forEach(function(b){if(!b)return;Object.keys(b).forEach(function(x){if(out.best[x]==null||b[x]>out.best[x])out.best[x]=b[x]})});
+  out.stats={};[cur.stats,inc.stats].forEach(function(st){if(!st)return;Object.keys(st).forEach(function(x){var a=out.stats[x]||{c:0,w:0},b=st[x]||{};a.c+=(b.c||0);a.w+=(b.w||0);out.stats[x]=a})});
+  function unionTime(a,b){var o={};[a,b].forEach(function(src){if(!src)return;Object.keys(src).forEach(function(x){if(o[x]==null||src[x]>o[x])o[x]=src[x]})});return o}
+  out.wrong=unionTime(cur.wrong,inc.wrong);out.liked=unionTime(cur.liked,inc.liked);out.seen=unionTime(cur.seen,inc.seen);
+  out.answered={};[cur.answered,inc.answered].forEach(function(src){if(!src)return;Object.keys(src).forEach(function(x){out.answered[x]=src[x]})});
+  out.timer=(inc.timer!=null)?inc.timer:cur.timer;return out}
+function applyBackup(d){Object.keys(d).forEach(function(k){if(k.indexOf('icgram')!==0)return;var val=mergeVal(k,d[k]);localStorage.setItem(k,typeof val==='string'?val:JSON.stringify(val))});load()}
+function copyText(s,okMsg){function done(){toast(okMsg||'คัดลอกแล้ว')}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(s).then(done).catch(fallback)}else fallback();
+  function fallback(){var t=$('#bakOut');if(t){t.focus();t.select();try{document.execCommand('copy');done()}catch(e){toast('คัดลอกไม่สำเร็จ ลองเลือกข้อความเอง')}}}}
 /* ---------- helpers ---------- */
 function rnd(n){return Math.floor(Math.random()*n)}
 function pick(a){return a[rnd(a.length)]}
@@ -225,9 +250,17 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
   '<h2>ความแม่นรายบท</h2>'+(Object.keys(acc).length?D.chapters.filter(function(c){return acc[c.id]}).map(function(c){var a=acc[c.id],p=Math.round(100*a.c/(a.c+a.w));return '<div class="bar2"><span class="lbl">'+esc(c.id+' '+c.title)+'</span><div class="prog"><i style="width:'+p+'%;'+(p<PASS?'background:#ff8fa8':'')+'"></i></div><span class="pc">'+p+'%</span></div>'}).join(''):'<p class="muted">ยังไม่มีข้อมูล</p>')+
   '<h2>ข้อที่ผิดค้างอยู่</h2><button class="btn" id="toRev">ดู '+Object.keys(S.wrong).length+' ข้อในหน้าทบทวน</button>'+
   '<h2>โพสต์ที่บันทึก</h2></div>'+(it.length?gridHTML(it):'<div class="page"><p class="muted">ยังไม่มี กดหัวใจในฟีดได้เลย</p></div>')+
-  '<div class="page"><button class="btn sm" id="reset">ล้างข้อมูลความคืบหน้าทั้งหมด</button></div>';
+  '<div class="page bak"><h2>สำรองความคืบหน้า</h2><p class="muted">คัดลอกรหัสนี้ไปวางในหน้าโปรไฟล์ของเครื่องอื่น เช่น จาก iPhone ไป iPad ไม่ต้องสมัครบัญชี</p><textarea class="bak-code" id="bakOut" readonly rows="4"></textarea><div class="bak-actions"><button class="btn pri sm" id="bakCopy">คัดลอก</button><button class="btn sm" id="bakShare" hidden>แชร์</button></div>'+
+  '<h2>โหลดความคืบหน้า</h2><p class="muted">วางรหัสที่สำรองไว้ แล้วกดโหลด ระบบจะรวมกับข้อมูลในเครื่องนี้</p><textarea class="bak-code" id="bakIn" rows="4" placeholder="วางรหัสที่นี่"></textarea><button class="btn pri sm" id="bakLoad">โหลดความคืบหน้า</button>'+
+  '<div style="margin-top:18px"><button class="btn sm" id="reset">ล้างข้อมูลความคืบหน้าทั้งหมด</button></div></div>';
   v.innerHTML=h;wireGrid(v,it);$('#toRev').onclick=function(){go('review')};
+  var code=backupCode();$('#bakOut').value=code;
+  $('#bakCopy').onclick=function(){copyText(code,'คัดลอกแล้ว')};
+  if(navigator.share){var sh=$('#bakShare');sh.hidden=false;sh.onclick=function(){navigator.share({title:'ICgram สำรองความคืบหน้า',text:code}).then(function(){toast('แชร์แล้ว')}).catch(function(){})}};
+  $('#bakLoad').onclick=function(){var raw=$('#bakIn').value;var parsed;try{parsed=parseBackup(raw)}catch(e){toast('รหัสไม่ถูกต้อง');return}
+    if(!confirm('รวมความคืบหน้าจากรหัสนี้เข้าเครื่องนี้? คะแนนสูงสุดจะเก็บค่าที่ดีกว่า และประวัติข้อสอบจะถูกรวมกัน'))return;
+    try{applyBackup(parsed.d);toast('โหลดแล้ว');location.reload()}catch(e){toast('โหลดไม่สำเร็จ')}};
   $('#reset').onclick=function(){if(confirm('ล้างคะแนน ประวัติ และรายการบันทึกทั้งหมด?')){localStorage.removeItem(KEY);load();updLiked();go('profile')}};}
-window.ICG={go:go,startQuiz:startQuiz,qz:function(){return QZ}};
+window.ICG={go:go,startQuiz:startQuiz,qz:function(){return QZ},backupCode:backupCode,parseBackup:parseBackup,applyBackup:applyBackup,KEY:KEY};
 go('home');
 })();
