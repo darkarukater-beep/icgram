@@ -254,11 +254,12 @@ function showExp(q,ok,el){var c=$('.comments',el);var n=cheerName()||'ICgram';
   c.innerHTML=(ok===null?'':'<div class="cmt"><span class="av">IC</span><div class="bub"><b>'+esc('ทีม '+n)+'</b> '+(ok?'ถูกต้อง! เก่งมาก ✨':'ยังไม่ใช่ ไม่เป็นไรนะ ข้อนี้เก็บไว้ในหน้า “ทบทวน” แล้ว')+'</div></div>')+
   '<div class="cmt"><span class="av">✓</span><div class="bub"><b>เฉลย</b> ข้อ '+L[q.ans]+'<br>'+expHTML(q)+'</div></div>'}
 /* ---------- notes & stories ---------- */
-function openNote(i){var n=D.notes[i],sd=noteSeed(i),pv=getPrivacy();
+function photoSheet(sd,body){var pv=getPrivacy();
   var W=Math.min(window.innerWidth||390,520),b=pv?null:bannerPos(sd,W,Math.round(W*1.25),0);
-  var top=pv?'':'<div class="nph"><img class="artist" src="'+photo(sd)+'" style="'+(b?b.css:'object-position:50% 20%')+'" alt=""></div>';
-  modal('<div class="grab"></div><button class="nx" id="mx" aria-label="ปิด">✕</button>'+top+'<div class="nbody"><h3 style="margin:0 0 6px">📝 โน้ต '+(i+1)+'</h3><div>'+n.full+'</div><div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button></div></div>','nsheet'+(pv?' nopic':''));
+  var top=pv?'':'<div class="nph"><img class="artist" src="'+photo(sd)+'" style="'+(b?b.css:posStyle(sd).replace(/^ style="|"$/g,''))+'" alt=""></div>';
+  modal('<div class="grab"></div><button class="nx" id="mx" aria-label="ปิด">✕</button>'+top+'<div class="nbody">'+body+'</div>','nsheet'+(pv?' nopic':''));
   $('#mx').onclick=closeModal}
+function openNote(i){var n=D.notes[i];photoSheet(noteSeed(i),'<h3 style="margin:0 0 6px">📝 โน้ต '+(i+1)+'</h3><div>'+n.full+'</div><div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button></div>')}
 function modal(h,cls){var m=$('#modal');m.innerHTML='<div class="sheet'+(cls?' '+cls:'')+'">'+h+'</div>';m.classList.remove('hidden');m.onclick=function(e){if(e.target===m)closeModal()};var c=$('#mclose');if(c)c.onclick=closeModal;
   var sh=m.firstChild,y0=null,dy=0;sh.addEventListener('touchstart',function(e){if(sh.scrollTop>0){y0=null;return}y0=e.touches[0].clientY;dy=0;sh.style.transition='none'},{passive:true});
   sh.addEventListener('touchmove',function(e){if(y0==null)return;dy=e.touches[0].clientY-y0;if(dy>0){sh.style.transform='translateY('+dy+'px)';if(e.cancelable)e.preventDefault()}},{passive:false});
@@ -377,7 +378,7 @@ function likedItems(){return Object.keys(S.liked).sort(function(a,b){return S.li
   if(id[0]==='L'){var m=id.slice(1).split('_'),c=CHBY[m[0]];return c?{id:id,label:'บท '+c.id+' สรุป',html:'<b>บท '+c.id+' '+esc(c.title)+'</b><p>'+c.kp[+m[1]]+'</p>'}:null}
   return null}).filter(Boolean)}
 function gridHTML(items){return '<div class="grid3">'+items.map(function(it,i){var media=getPrivacy()?tileHTML('', '', hash(it.id)):'<img loading="lazy" class="artist" src="'+thumb(hash(it.id))+'"'+posStyle(hash(it.id))+' alt="">';return '<div class="gi" data-i="'+i+'">'+media+'<span>'+esc(it.label)+'</span></div>'}).join('')+'</div>'}
-function wireGrid(v,items){$$('.gi',v).forEach(function(g){g.onclick=function(){var it=items[+g.dataset.i];modal(it.html+'<div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button><button class="btn" id="unlike">♡ เอาออก</button></div>');$('#unlike').onclick=function(){toggleLike(it.id,null);closeModal();go(cur)}}})}
+function wireGrid(v,items){$$('.gi',v).forEach(function(g){g.onclick=function(){var it=items[+g.dataset.i];photoSheet(hash(it.id),it.html+'<div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button><button class="btn" id="unlike">♡ เอาออก</button></div>');$('#unlike').onclick=function(){toggleLike(it.id,null);closeModal();go(cur)}}})}
 function likedPage(v){var it=likedItems();v.innerHTML='<div class="page"><h1>♥ ที่บันทึกไว้</h1><p class="muted">กดหัวใจในฟีดหรือในข้อสอบเพื่อเก็บไว้ที่นี่</p></div>'+(it.length?gridHTML(it):'<div class="page"><div class="card">ยังไม่มีโพสต์ที่บันทึกไว้</div></div>');wireGrid(v,it)}
 var IG=[['JENNIE','jennierubyjane'],['Wonyoung (IVE)','for_everyoung10'],['Natty (KISS OF LIFE)','natty_0530']];
 function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;var nC=0,nW=0;for(var k in S.stats){nC+=S.stats[k].c;nW+=S.stats[k].w}
