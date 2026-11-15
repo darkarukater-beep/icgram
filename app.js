@@ -275,7 +275,7 @@ function formulaPage(v,arg){if(arg==='learn'||arg==='sheet')FTAB=arg;
   $('#back').onclick=function(){if(FTAB==='learn'&&window.ICLearn&&ICLearn.isOpen()){ICLearn.reset();showF('learn');window.scrollTo(0,0);return}go('read')};
   function showF(t){FTAB=t;try{sessionStorage.setItem('icg-ftab',t)}catch(e){}
     $$('#fseg button').forEach(function(b){b.classList.toggle('on',b.dataset.ft===t)});var b=$('#fbody');
-    if(t==='learn'&&window.ICLearn){ICLearn.render(b,{esc:esc,toast:toast,cheer:function(ok){return cheer(ok)}})}
+    if(t==='learn'&&window.ICLearn){ICLearn.render(b,{esc:esc,toast:toast,cheer:function(ok){return cheer(ok)},getPrivacy:getPrivacy,photo:photo,thumb:thumb,tileHTML:tileHTML,hash:hash})}
     else{b.innerHTML='<div class="fsheet">'+D.formulaSheet+'</div>'}}
   $$('#fseg button').forEach(function(b){b.onclick=function(){if(b.dataset.ft===FTAB&&!(FTAB==='learn'&&window.ICLearn&&ICLearn.isOpen()))return;if(window.ICLearn&&b.dataset.ft==='learn'&&FTAB==='learn')ICLearn.reset();showF(b.dataset.ft);window.scrollTo(0,0)}});
   showF(FTAB==='learn'&&window.ICLearn?'learn':'sheet');}

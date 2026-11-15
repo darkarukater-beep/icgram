@@ -46,8 +46,19 @@ function merge(cur,inc){var out={t:{}};cur=cur||{};inc=inc||{};
 L.merge=merge;L.reload=function(){ST=null};L.passedCount=passedCount;L.total=TOP.length;
 
 /* ---------- rendering helpers ---------- */
-var C={};/* ctx from app.js: esc,toast,cheer */
+var C={};/* ctx from app.js: esc,toast,cheer,getPrivacy,photo,tileHTML,hash */
 function esc(s){return C.esc?C.esc(s):String(s)}
+function priv(){return !!(C.getPrivacy&&C.getPrivacy())}
+function seedOf(t,off){return (C.hash?C.hash(String(t.id)):(0))+(off||0)}
+function media(seed,cls,label){
+  cls=cls||'';
+  if(priv()){
+    if(C.tileHTML)return C.tileHTML(cls,label||'',seed);
+    return '<div class="'+cls+' ph-tile" aria-hidden="true">'+(label?('<span>'+esc(label)+'</span>'):'')+'</div>';
+  }
+  if(!C.photo)return '<div class="'+cls+' ph-tile" aria-hidden="true"></div>';
+  return '<img loading="lazy" class="artist '+cls+'" src="'+C.photo(seed)+'" alt="">';
+}
 function tex(h){if(!window.katex)return h;return String(h).replace(/\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)/g,function(m,d,i){try{return katex.renderToString(d!=null?d:i,{displayMode:d!=null,throwOnError:false,output:'html'})}catch(e){return m}})}
 function sym(s){if(/[^\x00-\x7f]/.test(s)||(/ /.test(s)&&!/\\/.test(s)))return '<b>'+esc(s)+'</b>';return tex('\\('+s+'\\)')}
 function backLabel(b){if(!b)return '';if(b[0]==='w')return 'ขั้นที่ 4 · ทำโจทย์ด้วยกัน ขั้น '+b.slice(1);return {c:'ขั้นที่ 1 · เข้าใจแนวคิด',v:'ขั้นที่ 2 · เข้าใจตัวแปร',e:'ขั้นที่ 3 · ดูตัวอย่าง'}[b]||''}
@@ -74,15 +85,19 @@ function listView(v){var pc=passedCount(),N=TOP.length,s=st();
   '<div class="bar2"><span class="lbl">ผ่านแล้ว</span><div class="prog"><i style="width:'+Math.round(100*pc/N)+'%"></i></div><span class="pc">'+pc+'/'+N+'</span></div></div><div class="lrn-list">';
   TOP.forEach(function(t,i){var r=s.t[t.id]||{s:0,p:0,b:0,n:0},un=unlocked(i),cls=r.p?'done':(un?'now':'lock');
     var sub=r.p?('ผ่านแล้ว · ดีที่สุด '+r.b+'/'+NQ):(un?((r.s||r.n)?('ถึงขั้น '+(Math.min(r.s,5)+1)+'/6 · '+STAGES[Math.min(r.s,5)]):'พร้อมเริ่ม'):'ล็อกอยู่ · ผ่านสูตรก่อนหน้าก่อน');
-    h+='<button type="button" class="lrow '+cls+'" data-i="'+i+'"><span class="lnum">'+(r.p?'✓':(un?(i+1):'🔒'))+'</span><span class="ltx"><b>'+(i+1)+'. '+esc(t.title)+'</b><small>'+esc(sub)+'</small></span><span class="lgo">›</span></button>'});
+    h+='<button type="button" class="lrow '+cls+'" data-i="'+i+'"><span class="lrow-cover">'+media(seedOf(t,0),'',t.short||'')+'</span><span class="lrow-body"><span class="lnum">'+(r.p?'✓':(un?(i+1):'🔒'))+'</span><span class="ltx"><b>'+(i+1)+'. '+esc(t.title)+'</b><small>'+esc(sub)+'</small></span><span class="lgo">›</span></span></button>'});
   h+='</div></div>';v.innerHTML=h;
   Array.prototype.forEach.call(v.querySelectorAll('.lrow'),function(b){b.onclick=function(){var i=+b.dataset.i;if(!unlocked(i)){C.toast&&C.toast('ผ่าน "ทำโจทย์เอง" ของสูตรก่อนหน้าก่อน (ถูก '+PASS_N+' ใน '+NQ+')');return}openTopic(i)}})}
 
 function dotsHTML(r){var h='<div class="lrn-dots" role="tablist">';for(var k=0;k<6;k++){var cls=k===V.stage?'cur':(k<=r.s?'done':'lock');
   h+='<button type="button" class="ldot '+cls+'" data-st="'+k+'"'+(k>r.s?' disabled':'')+' aria-label="'+STAGES[k]+'"><i>'+(k+1)+'</i><span>'+SHORT[k]+'</span></button>'}return h+'</div>'}
 function topicView(v){var t=TOP[V.i],r=rec(t.id);
-  var h='<div class="lrn"><div class="lrn-top"><button type="button" class="btn sm" id="lList">← รายการสูตร</button><span class="lrn-count">สูตร '+(V.i+1)+'/'+TOP.length+(r.p?' · ผ่านแล้ว':'')+'</span></div>'+
-  '<h2 class="lrn-title">'+esc(t.title)+'</h2>'+dotsHTML(r)+'<div class="lrn-stage-h">ขั้นที่ '+(V.stage+1)+' · '+STAGES[V.stage]+'</div>';
+  var cheer=V.stage===5&&V.run&&V.run.ti===V.i&&V.run.done;
+  var pass=cheer&&V.run.res.filter(function(x){return x.ok}).length>=PASS_N;
+  var h='<div class="lrn"><div class="lrn-top"><button type="button" class="btn sm" id="lList">← รายการสูตร</button><span class="lrn-count">สูตร '+(V.i+1)+'/'+TOP.length+(r.p?' · ผ่านแล้ว':'')+'</span></div>';
+  if(cheer){h+='<div class="lcheer'+(pass?' ok':'')+'">'+media(seedOf(t,97),'lcheer-img','')+'</div><h2 class="lrn-title">'+esc(t.title)+'</h2>'}
+  else{h+='<div class="lrn-banner">'+media(seedOf(t,V.stage+1),'','')+'<div class="shade" aria-hidden="true"></div><h2 class="lrn-title">'+esc(t.title)+'</h2></div>'}
+  h+=dotsHTML(r)+'<div class="lrn-stage-h">ขั้นที่ '+(V.stage+1)+' · '+STAGES[V.stage]+'</div>';
   if(V.from&&V.stage<4)h+='<div class="lrn-back">ย้อนมาดูจุดที่ติด แล้วค่อยกลับไปลองชุดใหม่ <button type="button" class="btn sm" id="lBackRev">กลับไปหน้าทบทวน</button></div>';
   h+='<div class="card lrn-body" id="lBody">'+stageHTML(t,r)+'</div>'+navHTML(t,r)+'</div>';
   v.innerHTML=h;wireTopic(v,t,r);
