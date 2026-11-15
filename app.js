@@ -56,6 +56,7 @@ function applyPrivacy(on,opts){
   document.documentElement.setAttribute('data-privacy',on?'on':'off');
   syncPrivacyUI(on);
   setNavAvatar();
+  if(window.ICMedia)ICMedia.onPrivacy();
   if(opts&&opts.silent)return;
   if(SV){try{storyGo(SV.i)}catch(e){}}
   if(cur==='home')fpos=0;
@@ -138,9 +139,9 @@ function weakTopics(){var a=chapterAcc(),out=[];for(var k in a){var t=a[k].c+a[k
   out.sort(function(x,y){return x.pct-y.pct});return out.filter(function(x){return x.pct<PASS}).slice(0,5)}
 /* ---------- router ---------- */
 var cur='home',curArg=null;
-function go(tab,arg){cur=tab;if(arguments.length>1)curArg=arg;$$('#bottomnav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
+function go(tab,arg){if(window.ICMedia)ICMedia.leave();cur=tab;if(arguments.length>1)curArg=arg;$$('#bottomnav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
   stopHero();window.scrollTo(0,0);var v=$('#view');v.innerHTML='';
-  ({home:home,read:readList,chapter:chapter,formula:formulaPage,quiz:quizHome,run:runQuiz,review:review,profile:profile,liked:likedPage})[tab](v,arg);}
+  ({home:home,read:readList,chapter:chapter,formula:formulaPage,quiz:quizHome,run:runQuiz,review:review,profile:profile,liked:likedPage,reels:function(v){if(window.ICMedia)ICMedia.reels(v)}})[tab](v,arg);}
 $$('#bottomnav button').forEach(function(b){b.onclick=function(){go(b.dataset.tab)}});
 $('#logo').onclick=function(){go('home')};
 $('#btnFormula').onclick=function(){go('formula')};
@@ -513,5 +514,6 @@ document.addEventListener('keydown',function(e){
 });
 
 window.ICG={go:go,startQuiz:startQuiz,qz:function(){return QZ},backupCode:backupCode,parseBackup:parseBackup,applyBackup:applyBackup,KEY:KEY,THEME_KEY:THEME_KEY,getTheme:getTheme,applyTheme:applyTheme,PRIVACY_KEY:PRIVACY_KEY,getPrivacy:getPrivacy,applyPrivacy:applyPrivacy,evalExpr:calcEval,fmtNum:calcFmt,calcOpen:calcOpen,calcClose:calcClose,calcPress:calcPress,CALC:CALC};
+if(window.ICMedia)ICMedia.init({toast:toast});
 go('home');
 })();
