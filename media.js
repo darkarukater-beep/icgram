@@ -130,14 +130,14 @@ function burst(sec,x,y){var b=document.createElement('div');b.className='heart-b
 function paintLike(sec,on){var b=$('.reel-like',sec);if(!b)return;b.innerHTML=on?HEART_F:HEART_O;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));b.setAttribute('aria-label',on?'เลิกถูกใจ':'ถูกใจ');updCount()}
 function updCount(){var n=Object.keys(likes()).length,c=$('#reelLikedN');if(c)c.textContent=n?String(n):''}
 function reels(v){reelsLeave();R.v=v;document.body.classList.add('in-reels');
-  if(!R.order||R.order.length!==M.reels.length){R.order=[];for(var k=0;k<M.reels.length;k++)R.order.push(k)}
+  if(!R.order||R.order.length!==M.reels.length){R.order=shuffled(M.reels.length)}
   var p=priv(),lk=likes();
   var list=R.order.filter(function(ix){return R.filter!=='liked'||lk[M.reels[ix].f]});
   var h='<div id="reels" class="reels'+(p?' reels-priv':'')+'">';
   if(p){M.reels.forEach(function(r,i){h+='<section class="reel" data-i="'+i+'"><div class="ph-tile tone-'+(i%4)+' reel-tile"><span>Reel '+(i+1)+'</span></div><div class="reel-cap"><b>Reel '+(i+1)+' / '+M.reels.length+'</b><div>โหมดส่วนตัวเปิดอยู่ · ซ่อนวิดีโอแล้ว<br>ปิดโหมดส่วนตัว (ไอคอนตา) เพื่อดูรีล</div></div></section>'})}
   else if(!list.length){h+='<section class="reel reel-empty"><div><div class="re-h">'+HEART_O+'</div><b>ยังไม่มีรีลที่ถูกใจ</b><p>แตะหัวใจหรือแตะสองครั้งที่คลิปเพื่อเก็บไว้ดูที่นี่</p><button type="button" class="btn sm" id="reelAll">ดูรีลทั้งหมด</button></div></section>'}
   else list.forEach(function(ix,n){var r=M.reels[ix],on=!!lk[r.f];
-    h+='<section class="reel" data-id="'+esc(r.f)+'"><video class="artist" playsinline webkit-playsinline muted loop preload="none" data-src="assets/reels/'+r.f+'" data-poster="assets/reels/'+r.p+'"></video>'+
+    h+='<section class="reel" data-id="'+esc(r.f)+'"><video class="artist" playsinline webkit-playsinline muted loop preload="none" data-src="assets/reels/'+r.f+(r.v?'?v='+r.v:'')+'" data-poster="assets/reels/'+r.p+(r.v?'?v='+r.v:'')+'"></video>'+
       '<div class="reel-tap" aria-hidden="true"></div><div class="reel-paused hidden">'+ICO.play+'</div>'+
       '<div class="reel-side"><button type="button" class="reel-btn reel-fs'+(r.l?'':' hidden')+'" aria-label="ดูเต็มจอแนวนอน" title="ดูเต็มจอแนวนอน"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button type="button" class="reel-btn reel-like'+(on?' on':'')+'" aria-pressed="'+on+'" aria-label="'+(on?'เลิกถูกใจ':'ถูกใจ')+'">'+(on?HEART_F:HEART_O)+'</button><button type="button" class="reel-btn reel-mute" aria-label="เปิด/ปิดเสียง"></button></div>'+
       '<div class="reel-cap"><b>'+(n+1)+' / '+list.length+'</b>'+(r.c?'<div>'+esc(r.c)+'</div>':'')+'</div></section>'});
@@ -189,6 +189,6 @@ function musicDuck(){if(!A.paused){A.pause();saveSt();pausedByReel=true;toast('�
 function updMute(){if(!R.box)return;$$('.reel-mute',R.box).forEach(function(b){b.innerHTML=R.muted?'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>':'<svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';b.setAttribute('aria-pressed',String(!R.muted))})}
 
 function onPrivacy(){updMeta();render();if(!sh.classList.contains('hidden'))buildSheet()}
-window.ICMedia={init:function(c){ctx=c||{}},reels:reels,refreshReels:refreshReels,likes:likes,LIKES_KEY:LK,R:R,leave:reelsLeave,onPrivacy:onPrivacy,
+window.ICMedia={init:function(c){ctx=c||{}},reels:reels,refreshReels:refreshReels,likes:likes,LIKES_KEY:LK,R:R,leave:function(){R.order=null;reelsLeave()},onPrivacy:onPrivacy,
   play:play,pause:pause,next:function(){next(false)},prev:prev,open:openSheet,close:closeSheet,audio:A,state:function(){return st},KEY:MK};
 })();
