@@ -63,6 +63,7 @@ function applyPrivacy(on,opts){
   if(cur==='run'&&QZ)runQuiz($('#view'));
   else if(cur==='result')refreshResultMedia();
   else if(cur==='chapter'&&curArg)go('chapter',curArg);
+  else if(cur==='games'&&window.ICGames)go('games',ICGames.cur());
   else if(cur)go(cur);
 }
 function togglePrivacy(){
@@ -95,7 +96,8 @@ function parseBackup(raw){raw=String(raw||'').replace(/\s+/g,'');if(!raw)throw n
   var p=JSON.parse(json);var d=p&&(p.d||p.data);if(!d||typeof d!=='object')throw new Error('shape');
   var keys=Object.keys(d).filter(function(k){return k.indexOf('icgram')===0});if(!keys.length)throw new Error('keys');
   return {d:d,keys:keys}}
-function mergeVal(k,inc){if(k==='icgram-reel-likes'&&inc&&typeof inc==='object'&&!Array.isArray(inc)){var lc2;try{lc2=JSON.parse(localStorage.getItem(k))||{}}catch(e){lc2={}}var o2={};[lc2,inc].forEach(function(src){Object.keys(src).forEach(function(x){if(typeof src[x]==='number'&&(o2[x]==null||src[x]<o2[x]))o2[x]=src[x]})});return o2}
+function mergeVal(k,inc){if(k==='icgram-games'&&window.ICGames){var lg;try{lg=JSON.parse(localStorage.getItem(k))}catch(e){lg=null}return window.ICGames.merge(lg,inc)}
+  if(k==='icgram-reel-likes'&&inc&&typeof inc==='object'&&!Array.isArray(inc)){var lc2;try{lc2=JSON.parse(localStorage.getItem(k))||{}}catch(e){lc2={}}var o2={};[lc2,inc].forEach(function(src){Object.keys(src).forEach(function(x){if(typeof src[x]==='number'&&(o2[x]==null||src[x]<o2[x]))o2[x]=src[x]})});return o2}
   if(k==='icgram_learn'&&window.LEARN&&inc&&typeof inc==='object'){var lc;try{lc=JSON.parse(localStorage.getItem(k))}catch(e){lc=null}return window.LEARN.merge(lc,inc)}
   if(k!==KEY||!inc||typeof inc!=='object'||Array.isArray(inc))return inc;
   var cur=S||{}, out={};
@@ -119,6 +121,13 @@ function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=rnd(i+1),t=a
 function photo(i){return 'assets/photos/'+D.photos[((i%D.photos.length)+D.photos.length)%D.photos.length].f}
 function thumb(i){return photo(i).replace(/\/p(\d+)\.jpg$/,'/t$1.jpg')}
 function rphoto(){return photo(rnd(D.photos.length))}
+function pidx(i){return ((i%D.photos.length)+D.photos.length)%D.photos.length}
+function posStyle(i){var p=D.photos[pidx(i)];if(!p||!p.fc)return '';return ' style="object-position:'+Math.round(p.fc[0]*100)+'% '+Math.round(Math.max(0,p.fc[1]-p.fc[2]*0.15)*100)+'%"'}
+var FP=[];D.photos.forEach(function(p,i){if(p.fc)FP.push(i)});if(!FP.length)FP=D.photos.map(function(p,i){return i});
+function feedStyle(i){var p=D.photos[i];if(!p||!p.fc||!p.w)return '';var w=p.w,h=p.h,A=1.25,s0=Math.max(1/w,A/h),fx=p.fc[0],fy=p.fc[1],fhn=p.fc[2];
+  var ty=Math.max(0.2*A,fhn*h*s0*0.62),need=s0;if(fy>0)need=Math.max(need,ty/(fy*h));if(fy<1)need=Math.max(need,(A-ty)/((1-fy)*h));var sc=Math.min(need,s0*1.9);
+  var top=Math.min(0,Math.max(A-h*sc,ty-fy*h*sc)),left=Math.min(0,Math.max(1-w*sc,0.5-fx*w*sc));
+  return ' style="position:absolute;max-width:none;width:'+(w*sc*100).toFixed(2)+'%;height:auto;left:'+(left*100).toFixed(2)+'%;top:'+(top/A*100).toFixed(2)+'%"'}
 function hash(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h)}
 function cheerName(){return (!getPrivacy()&&NAMES.length)?pick(NAMES):''}
 var CHEERS_OK=['เก่งมาก! {n} ภูมิใจในตัว'+ME+'สุดๆ ✨','ผ่านฉลุย! {n} ปรบมือให้เลย 👏','สวยงาม! {n} บอกว่าวันสอบจริงก็ทำได้แน่','ปังมาก! {n} ขอเป็นกำลังใจให้ต่อไป ✨'];
@@ -131,7 +140,7 @@ function setName(s){return D.sets[s]?D.sets[s].short:s}
 function brandName(){return artistOn()?ART:'สู้ๆ นะ!'}
 function tone(seed){return (typeof seed==='number'?Math.abs(seed):hash(String(seed)))%4}
 function tileHTML(cls,label,seed){return '<div class="'+(cls||'')+' ph-tile tone-'+tone(seed)+'" aria-hidden="true">'+(label?('<span>'+esc(label)+'</span>'):'')+'</div>'}
-function thumbHTML(seed,label){return getPrivacy()?tileHTML('thumb',label||'IC',seed):'<img class="thumb artist" loading="lazy" src="'+thumb(typeof seed==='number'?seed:hash(String(seed)))+'" alt="">'}
+function thumbHTML(seed,label){return getPrivacy()?tileHTML('thumb',label||'IC',seed):(function(n){return '<img class="thumb artist" loading="lazy" src="'+thumb(n)+'"'+posStyle(n)+' alt="">'})(typeof seed==='number'?seed:hash(String(seed)))}
 /* ---------- stats ---------- */
 function record(q,ok){var st=S.stats[q.id]||{c:0,w:0};if(ok)st.c++;else st.w++;S.stats[q.id]=st;
   if(ok){if(S.wrong[q.id])delete S.wrong[q.id]}else S.wrong[q.id]=Date.now();S.answered[q.id]=1;save()}
@@ -140,9 +149,10 @@ function weakTopics(){var a=chapterAcc(),out=[];for(var k in a){var t=a[k].c+a[k
   out.sort(function(x,y){return x.pct-y.pct});return out.filter(function(x){return x.pct<PASS}).slice(0,5)}
 /* ---------- router ---------- */
 var cur='home',curArg=null;
-function go(tab,arg){if(window.ICMedia)ICMedia.leave();cur=tab;if(arguments.length>1)curArg=arg;$$('#bottomnav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
+function go(tab,arg){if(window.ICMedia)ICMedia.leave();if(window.ICGames)ICGames.leave();cur=tab;if(arguments.length>1)curArg=arg;$$('#bottomnav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
   stopHero();window.scrollTo(0,0);var v=$('#view');v.innerHTML='';
-  ({home:home,read:readList,chapter:chapter,formula:formulaPage,quiz:quizHome,run:runQuiz,review:review,profile:profile,liked:likedPage,reels:function(v){if(window.ICMedia)ICMedia.reels(v)}})[tab](v,arg);}
+  ({home:home,read:readList,chapter:chapter,formula:formulaPage,quiz:quizHome,run:runQuiz,review:review,profile:profile,liked:likedPage,reels:function(v){if(window.ICMedia)ICMedia.reels(v)},games:function(v,a){if(window.ICGames)ICGames.render(v,a,gameCtx())}})[tab](v,arg);}
+function gameCtx(){return {go:go,photo:photo,thumb:thumb,pos:posStyle,getPrivacy:getPrivacy,tileHTML:tileHTML,cheer:cheer,toast:toast,evalExpr:calcEval,fmtNum:calcFmt,questions:D.questions}}
 $$('#bottomnav button').forEach(function(b){b.onclick=function(){go(b.dataset.tab)}});
 $('#logo').onclick=function(){go('home')};
 $('#btnFormula').onclick=function(){go('formula')};
@@ -161,7 +171,7 @@ function home(v){
   var notes='<div class="notes">'+D.notes.map(function(n,i){return '<div class="note" data-i="'+i+'">'+n.short+'</div>'}).join('')+'</div>';
   // stories: chapters + formula decks
   var st='<div class="stories">'+D.stories.map(function(s,i){
-    var inner=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,8),i):'<img loading="lazy" class="artist" src="'+thumb(s.photo)+'" alt="">';
+    var inner=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,8),i):'<img loading="lazy" class="artist" src="'+thumb(s.photo)+'"'+posStyle(s.photo)+' alt="">';
     return '<button class="st" data-s="'+i+'"><div class="ring'+(S.seen[s.id]?' seen':'')+'">'+inner+'</div><span class="sl">'+esc(s.label)+'</span></button>';
   }).join('')+'</div>';
   var tot=S.attempts.length, ans=Object.keys(S.answered).length, best=Math.max.apply(null,[0].concat(Object.keys(S.best).map(function(k){return S.best[k]})));
@@ -171,12 +181,12 @@ function home(v){
   var dash='<section class="dash"><div class="hero'+(getPrivacy()?' privacy-hero':'')+'">'+heroInner+'<div class="htxt"><h2>'+'สู้ๆ นะ '+esc(ME)+'! 🤍'+'</h2><p>ICgram'+(artistOn()?' · ธีม '+esc(ART):'')+' · เป้าหมาย: สอบ IC Plain (P1) ผ่าน ≥ '+PASS+'% · วันนี้อ่านนิด ทำข้อสอบหน่อยก็พอ</p></div></div>'+
    '<div class="stats"><div><b>'+tot+'</b><span>ชุดที่ทำแล้ว</span></div><div><b>'+ans+'/'+D.questions.length+'</b><span>ข้อที่เคยตอบ</span></div><div><b>'+(tot?best+'%':'–')+'</b><span>คะแนนสูงสุด</span></div></div>'+
    '<div class="weak">'+(wk.length?'<b>หัวข้อที่ควรทวน:</b><br>'+wk.map(function(w){return '<button class="chip" data-ch="'+w.ch+'">'+esc(chTitle(w.ch))+' · '+w.pct+'%</button>'}).join(''):'<span class="muted">ทำข้อสอบสักชุด แล้วระบบจะบอกหัวข้อที่ควรทวนให้ตรงนี้</span>')+
-   '<div style="margin-top:8px"><button class="btn pri sm" id="goQuiz">เริ่มทำข้อสอบ</button><button class="btn sm" id="goRead">อ่านเนื้อหา</button><button class="btn sm" id="goF">ชีตสูตร</button><button class="btn sm" id="goL">เข้าใจโจทย์</button></div></div></section>';
+   '<div style="margin-top:8px"><button class="btn pri sm" id="goQuiz">เริ่มทำข้อสอบ</button><button class="btn sm" id="goRead">อ่านเนื้อหา</button><button class="btn sm" id="goF">ชีตสูตร</button><button class="btn sm" id="goL">เข้าใจโจทย์</button><button class="btn sm" id="goG">เกม</button></div></div></section>';
   v.innerHTML=notes+st+dash+'<div id="feed"></div><button class="morebtn" id="more">โหลดโพสต์เพิ่ม</button>';
   $$('.note',v).forEach(function(e){e.onclick=function(){openNote(+e.dataset.i)}});
   $$('.st',v).forEach(function(e){e.onclick=function(){openStory(+e.dataset.s)}});
   $$('.chip[data-ch]',v).forEach(function(e){e.onclick=function(){go('chapter',e.dataset.ch)}});
-  $('#goQuiz').onclick=function(){go('quiz')};$('#goRead').onclick=function(){go('read')};$('#goF').onclick=function(){go('formula','sheet')};$('#goL').onclick=function(){go('formula','learn')};
+  $('#goQuiz').onclick=function(){go('quiz')};$('#goRead').onclick=function(){go('read')};$('#goF').onclick=function(){go('formula','sheet')};$('#goL').onclick=function(){go('formula','learn')};$('#goG').onclick=function(){go('games')};
   if(!getPrivacy()){var k=1;heroT=setInterval(function(){var a=$('#h1'),b=$('#h2');if(!a){stopHero();return}k++;var top=(k%2)?a:b,bot=(k%2)?b:a;bot.src=photo(rnd(D.photos.length));setTimeout(function(){bot.style.opacity=1;top.style.opacity=0},300)},5000)}
   buildFeed();renderFeed(12);$('#more').onclick=function(){renderFeed(10)};
 }
@@ -192,12 +202,12 @@ function buildFeed(){
   while(lessons.length||forms.length||qs.length){var t=pat[i%pat.length];i++;var src=t==='quiz'?qs:t==='lesson'?lessons:forms;if(!src.length){src=qs.length?qs:lessons.length?lessons:forms}FEED.push(src.shift());}
 }
 function postHTML(p,idx){
-  var pi=hash(p.id)%D.photos.length, liked=!!S.liked[p.id];
+  var pi=FP[hash(p.id)%FP.length], liked=!!S.liked[p.id];
   var who='icgram.mill', sub, body, cap='', tileLab='ICgram';
   if(p.type==='lesson'){sub='สรุปบท '+chTitle(p.ch);body='<div class="tag">LESSON · บท '+p.ch+'</div><h3>'+esc(CHBY[p.ch].title)+'</h3><div>'+p.html+'</div>';cap='<b>'+esc(who)+'</b> อ่านแค่โพสต์เดียวก็ได้ 1 คะแนนความรู้ 📚';tileLab='บท '+p.ch;}
   else if(p.type==='formula'){sub='สูตรเด็ด';body='<div class="tag">FORMULA</div><h3>'+p.f.title+'</h3>'+p.f.html+(p.f.vars?'<div class="muted" style="font-size:12.5px">'+p.f.vars+'</div>':'');cap='<b>'+esc(who)+'</b> สูตรนี้จำให้ขึ้นใจ แล้วไปลองทำโจทย์กัน ✨';tileLab='สูตร';}
   else {var q=p.q;sub=setName(q.set)+' ข้อ '+q.n;body='<div class="tag">QUIZ · '+esc(setName(q.set))+' ข้อ '+q.n+'</div><div class="qstem">'+q.stem+'</div>'+q.choices.map(function(c,j){return '<button class="choice" data-j="'+j+'"><span class="cl">'+L[j]+'</span>'+c+'</button>'}).join('');cap='<b>'+esc(who)+'</b> ตอบในโพสต์ได้เลย แล้วดูเฉลยในคอมเมนต์ 👇';tileLab='ข้อสอบ';}
-  var media=getPrivacy()?tileHTML('',tileLab,hash(p.id)):'<img loading="lazy" class="artist" src="'+photo(pi)+'" alt="">';
+  var media=getPrivacy()?tileHTML('',tileLab,hash(p.id)):'<img loading="lazy" class="artist fp" src="'+photo(pi)+'"'+feedStyle(pi)+' alt="">';
   return '<article class="post" data-id="'+p.id+'"><div class="ph"><span class="av">IC</span><div class="who">'+esc(who)+'<small>'+esc(sub)+'</small></div></div>'+
    '<div class="pmedia">'+media+'<div class="overlay">'+body+'</div></div>'+
    '<div class="pbar"><button class="like'+(liked?' liked':'')+'">'+(liked?'♥\uFE0E':'♡\uFE0E')+'</button><button class="cm" title="เฉลย/คอมเมนต์">💬</button><button class="save" title="บันทึกไว้ทบทวน">'+(liked?'🔖':'📑')+'</button></div>'+
@@ -231,7 +241,7 @@ function closeModal(){$('#modal').classList.add('hidden')}
 var SV=null;
 function openStory(si){var s=D.stories[si];S.seen[s.id]=1;save();var el=$('#story');el.classList.remove('hidden');document.body.style.overflow='hidden';
   SV={si:si,i:0,t:null,start:0,paused:false,dur:7000};
-  var headMedia=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,2),si):'<img class="artist" src="'+thumb(s.photo)+'" alt="">';
+  var headMedia=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,2),si):'<img class="artist" src="'+thumb(s.photo)+'"'+posStyle(s.photo)+' alt="">';
   el.innerHTML='<div class="sv"><div class="bg"></div><div class="bars">'+s.slides.map(function(){return '<span><i></i></span>'}).join('')+'</div><div class="shead">'+headMedia+'<span>'+esc(s.label)+'</span><button class="x">×</button></div><div class="tapL"></div><div class="tapR"></div><div class="sbody"></div></div>';
   $('.x',el).onclick=closeStory;$('.tapL',el).onclick=function(){storyGo(SV.i-1)};$('.tapR',el).onclick=function(){storyGo(SV.i+1)};
   var hold=function(on){SV.paused=on};$('.sbody',el).addEventListener('touchstart',function(){hold(true)},{passive:true});$('.sbody',el).addEventListener('touchend',function(){hold(false)});
@@ -277,7 +287,7 @@ function formulaPage(v,arg){if(arg==='learn'||arg==='sheet')FTAB=arg;
   $('#back').onclick=function(){if(FTAB==='learn'&&window.ICLearn&&ICLearn.isOpen()){ICLearn.reset();showF('learn');window.scrollTo(0,0);return}go('read')};
   function showF(t){FTAB=t;try{sessionStorage.setItem('icg-ftab',t)}catch(e){}
     $$('#fseg button').forEach(function(b){b.classList.toggle('on',b.dataset.ft===t)});var b=$('#fbody');
-    if(t==='learn'&&window.ICLearn){ICLearn.render(b,{esc:esc,toast:toast,cheer:function(ok){return cheer(ok)},getPrivacy:getPrivacy,photo:photo,thumb:thumb,tileHTML:tileHTML,hash:hash})}
+    if(t==='learn'&&window.ICLearn){ICLearn.render(b,{esc:esc,toast:toast,cheer:function(ok){return cheer(ok)},getPrivacy:getPrivacy,photo:photo,thumb:thumb,tileHTML:tileHTML,hash:hash,pos:posStyle})}
     else{b.innerHTML='<div class="fsheet">'+D.formulaSheet+'</div>'}}
   $$('#fseg button').forEach(function(b){b.onclick=function(){if(b.dataset.ft===FTAB&&!(FTAB==='learn'&&window.ICLearn&&ICLearn.isOpen()))return;if(window.ICLearn&&b.dataset.ft==='learn'&&FTAB==='learn')ICLearn.reset();showF(b.dataset.ft);window.scrollTo(0,0)}});
   showF(FTAB==='learn'&&window.ICLearn?'learn':'sheet');}
@@ -286,6 +296,7 @@ var QZ=null;
 function quizHome(v){var b=function(k){return S.best[k]!=null?' · ดีที่สุด '+S.best[k]+'%':''};
   var h='<div class="page"><h1>＋ ข้อสอบ</h1><p class="muted">ตอบแล้วรู้ผลทันทีพร้อมเฉลย · เกณฑ์ผ่าน '+PASS+'% · ข้อที่ตอบผิดจะไปอยู่ในหน้า “ทบทวน” อัตโนมัติ</p>'+
   '<label class="muted" style="display:flex;align-items:center;gap:6px;margin:6px 0"><input type="checkbox" id="tmr"'+(S.timer?' checked':'')+'> จับเวลา (1.5 นาที/ข้อ ตามเวลาสอบจริง 150 นาที/100 ข้อ)</label>';
+  h+='<div class="card g-entry"><div class="row">'+thumbHTML(57,'เกม')+'<div style="flex:1"><b>เกมฝึกสูตรและข้อสอบ</b><div class="muted">จับคู่สูตร · ตอบไว 60 วิ · คิดเลขเร็ว · ทายศัพท์</div></div></div><button class="btn pri sm" id="toGames">เข้าเกม</button></div>';
   Object.keys(D.sets).forEach(function(k){var s=D.sets[k];h+='<div class="card"><div class="row">'+thumbHTML(hash(k)+2,s.short||'ชุด')+'<div style="flex:1"><b>'+esc(s.title)+'</b><div class="muted">'+esc(s.desc)+b(k)+'</div></div></div><button class="btn pri sm" data-set="'+k+'">เริ่ม ('+s.count+' ข้อ)</button><button class="btn sm" data-set="'+k+'" data-sh="1">สุ่มลำดับ</button></div>'});
   h+='<div class="card"><div class="row">'+thumbHTML(9,'สุ่ม')+'<div><b>โหมดสุ่มรวม (Mixed)</b><div class="muted">สุ่มจากทุกชุด'+b('mix')+'</div></div></div><button class="btn pri sm" data-mix="10">10 ข้อ</button><button class="btn sm" data-mix="20">20 ข้อ</button><button class="btn sm" data-mix="40">40 ข้อ</button></div>';
   h+='<div class="card"><b>ตามบท</b><div class="muted">เลือกบทที่อยากฝึก</div><div style="margin-top:6px">'+D.chapters.filter(function(c){return c.qcount}).map(function(c){return '<button class="chip lav" data-ch="'+c.id+'">'+c.id+' ('+c.qcount+')</button>'}).join('')+'</div></div>';
@@ -296,7 +307,7 @@ function quizHome(v){var b=function(k){return S.best[k]!=null?' · ดีที�
   $$('[data-set]',v).forEach(function(e){e.onclick=function(){startQuiz({mode:'set',set:e.dataset.set,shuffle:!!e.dataset.sh})}});
   $$('[data-mix]',v).forEach(function(e){e.onclick=function(){startQuiz({mode:'mix',n:+e.dataset.mix})}});
   $$('[data-ch]',v).forEach(function(e){e.onclick=function(){startQuiz({mode:'ch',ch:e.dataset.ch})}});
-  $('#redo').onclick=function(){startQuiz({mode:'wrong'})};}
+  $('#redo').onclick=function(){startQuiz({mode:'wrong'})};$('#toGames').onclick=function(){go('games')};}
 function startQuiz(o){var qs,title,key;
   if(o.mode==='set'){qs=D.questions.filter(function(q){return q.set===o.set});if(o.shuffle)qs=shuffle(qs);title=D.sets[o.set].title;key=o.set}
   else if(o.mode==='mix'){qs=shuffle(D.questions).slice(0,o.n);title='สุ่มรวม '+o.n+' ข้อ';key='mix'}
@@ -339,7 +350,7 @@ function likedItems(){return Object.keys(S.liked).sort(function(a,b){return S.li
   if(id[0]==='F'){var f=D.formulas.filter(function(x){return 'F'+x.id===id})[0];return f?{id:id,label:'สูตร: '+f.title.replace(/<[^>]+>/g,''),html:'<b>'+f.title+'</b>'+f.html+(f.vars?'<div class="muted">'+f.vars+'</div>':'')}:null}
   if(id[0]==='L'){var m=id.slice(1).split('_'),c=CHBY[m[0]];return c?{id:id,label:'บท '+c.id+' สรุป',html:'<b>บท '+c.id+' '+esc(c.title)+'</b><p>'+c.kp[+m[1]]+'</p>'}:null}
   return null}).filter(Boolean)}
-function gridHTML(items){return '<div class="grid3">'+items.map(function(it,i){var media=getPrivacy()?tileHTML('', '', hash(it.id)):'<img loading="lazy" class="artist" src="'+thumb(hash(it.id))+'" alt="">';return '<div class="gi" data-i="'+i+'">'+media+'<span>'+esc(it.label)+'</span></div>'}).join('')+'</div>'}
+function gridHTML(items){return '<div class="grid3">'+items.map(function(it,i){var media=getPrivacy()?tileHTML('', '', hash(it.id)):'<img loading="lazy" class="artist" src="'+thumb(hash(it.id))+'"'+posStyle(hash(it.id))+' alt="">';return '<div class="gi" data-i="'+i+'">'+media+'<span>'+esc(it.label)+'</span></div>'}).join('')+'</div>'}
 function wireGrid(v,items){$$('.gi',v).forEach(function(g){g.onclick=function(){var it=items[+g.dataset.i];modal(it.html+'<div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button><button class="btn" id="unlike">♡ เอาออก</button></div>');$('#unlike').onclick=function(){toggleLike(it.id,null);closeModal();go(cur)}}})}
 function likedPage(v){var it=likedItems();v.innerHTML='<div class="page"><h1>♥ ที่บันทึกไว้</h1><p class="muted">กดหัวใจในฟีดหรือในข้อสอบเพื่อเก็บไว้ที่นี่</p></div>'+(it.length?gridHTML(it):'<div class="page"><div class="card">ยังไม่มีโพสต์ที่บันทึกไว้</div></div>');wireGrid(v,it)}
 var IG=[['JENNIE','jennierubyjane'],['Wonyoung (IVE)','for_everyoung10'],['Natty (KISS OF LIFE)','natty_0530']];
@@ -518,7 +529,7 @@ document.addEventListener('keydown',function(e){
   if(e.key>='0'&&e.key<='9'){e.preventDefault();calcPress(e.key)}
 });
 
-window.ICG={go:go,startQuiz:startQuiz,qz:function(){return QZ},backupCode:backupCode,parseBackup:parseBackup,applyBackup:applyBackup,KEY:KEY,THEME_KEY:THEME_KEY,getTheme:getTheme,applyTheme:applyTheme,PRIVACY_KEY:PRIVACY_KEY,getPrivacy:getPrivacy,applyPrivacy:applyPrivacy,evalExpr:calcEval,fmtNum:calcFmt,calcOpen:calcOpen,calcClose:calcClose,calcPress:calcPress,CALC:CALC};
+window.ICG={go:go,mergeVal:mergeVal,startQuiz:startQuiz,qz:function(){return QZ},backupCode:backupCode,parseBackup:parseBackup,applyBackup:applyBackup,KEY:KEY,THEME_KEY:THEME_KEY,getTheme:getTheme,applyTheme:applyTheme,PRIVACY_KEY:PRIVACY_KEY,getPrivacy:getPrivacy,applyPrivacy:applyPrivacy,evalExpr:calcEval,fmtNum:calcFmt,calcOpen:calcOpen,calcClose:calcClose,calcPress:calcPress,CALC:CALC};
 if(window.ICMedia)ICMedia.init({toast:toast});
 go('home');
 })();

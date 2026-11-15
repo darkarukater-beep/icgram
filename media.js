@@ -10,7 +10,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;
 function toast(t){if(ctx.toast)ctx.toast(t)}
 function fmt(s){s=Math.max(0,Math.floor(s||0));var m=Math.floor(s/60),x=s%60;return m+':'+(x<10?'0':'')+x}
 function title(i){return priv()?('Track '+(i+1)):M.music[i].t}
-function cover(i){return (priv()||!M.music[i]||!M.music[i].c)?'':'assets/covers/'+M.music[i].c}
+function cover(i){return (priv()||!M.music[i]||!M.music[i].c)?'':'assets/covers/'+M.music[i].c+'?v=2'}
 function setLabel(el,i){if(!el)return;var c=cover(i);el.style.backgroundImage=c?'url('+c+')':'';el.classList.toggle('vl-priv',!c)}
 
 /* ---------------- MUSIC ---------------- */

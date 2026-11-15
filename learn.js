@@ -57,7 +57,7 @@ function media(seed,cls,label){
     return '<div class="'+cls+' ph-tile" aria-hidden="true">'+(label?('<span>'+esc(label)+'</span>'):'')+'</div>';
   }
   if(!C.photo)return '<div class="'+cls+' ph-tile" aria-hidden="true"></div>';
-  return '<img loading="lazy" class="artist '+cls+'" src="'+C.photo(seed)+'" alt="">';
+  return '<img loading="lazy" class="artist '+cls+'" src="'+C.photo(seed)+'"'+(C.pos?C.pos(seed):'')+' alt="">';
 }
 function tex(h){if(!window.katex)return h;return String(h).replace(/\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)/g,function(m,d,i){try{return katex.renderToString(d!=null?d:i,{displayMode:d!=null,throwOnError:false,output:'html'})}catch(e){return m}})}
 function sym(s){if(/[^\x00-\x7f]/.test(s)||(/ /.test(s)&&!/\\/.test(s)))return '<b>'+esc(s)+'</b>';return tex('\\('+s+'\\)')}
