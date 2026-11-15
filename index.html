@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th" data-theme="dark" style="background:#000">
+<html lang="th" data-theme="dark" data-privacy="off" style="background:#000">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -14,6 +14,8 @@ document.documentElement.setAttribute("data-theme",t);
 document.documentElement.style.background=t==="light"?"#fff":"#000";
 var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",t==="light"?"#ffffff":"#000000");
 var s=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(s)s.setAttribute("content",t==="light"?"default":"black");
+var p="off";try{if(localStorage.getItem("icgram-privacy")==="on")p="on"}catch(e){}
+document.documentElement.setAttribute("data-privacy",p);
 })();
 </script>
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=5">
@@ -22,7 +24,7 @@ var s=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]
 <link rel="manifest" href="manifest.webmanifest?v=5">
 <title>ICgram · ติวสอบ IC Plain (P1)</title>
 <link rel="stylesheet" href="assets/katex/katex.min.css">
-<link rel="stylesheet" href="app.css?v=6">
+<link rel="stylesheet" href="app.css?v=7">
 </head>
 <body>
 <div id="app">
@@ -30,6 +32,13 @@ var s=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]
     <div class="logo" id="logo">ICgram<span class="logo-dot">✦</span></div>
     <div class="top-actions">
       <button class="icon-btn" id="btnTheme" title="โทนดำ · แตะเพื่อใช้โทนขาว" aria-label="สลับเป็นโทนขาว">☀</button>
+      <button class="icon-btn" id="btnPrivacy" title="โหมดส่วนตัว · แตะเพื่อซ่อนรูปศิลปิน" aria-label="เปิดโหมดส่วนตัว" aria-pressed="false">
+        <svg class="ico-eye" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M2.5 12s3.6-6.2 9.5-6.2S21.5 12 21.5 12 17.9 18.2 12 18.2 2.5 12 2.5 12z"/>
+          <circle cx="12" cy="12" r="2.4" fill="currentColor"/>
+          <path class="eye-slash" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M5 19 L19 5"/>
+        </svg>
+      </button>
       <button class="icon-btn" id="btnLiked" title="โพสต์ที่กดหัวใจ" aria-label="liked">♡<span class="badge" id="likedCount"></span></button>
       <button class="icon-btn" id="btnFormula" title="ชีตสูตร" aria-label="formula">∑</button>
     </div>
@@ -40,14 +49,68 @@ var s=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]
     <button data-tab="read"><span class="ni">📖</span><span class="nl">อ่าน</span></button>
     <button data-tab="quiz" class="nav-plus"><span class="ni">＋</span><span class="nl">ข้อสอบ</span></button>
     <button data-tab="review"><span class="ni">↻</span><span class="nl">ทบทวน</span></button>
-    <button data-tab="profile"><span class="ni"><img id="navAvatar" alt=""></span><span class="nl">โปรไฟล์</span></button>
+    <button data-tab="profile"><span class="ni nav-av"><img id="navAvatar" alt=""><span id="navAvatarPriv" class="av-priv">M</span></span><span class="nl">โปรไฟล์</span></button>
   </nav>
 </div>
 <div id="story" class="hidden" aria-modal="true"></div>
 <div id="modal" class="hidden"></div>
+<button type="button" id="calcFab" class="calc-fab" title="เครื่องคิดเลข" aria-label="เปิดเครื่องคิดเลข" aria-expanded="false">
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <rect x="4.2" y="2.6" width="15.6" height="18.8" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/>
+    <rect x="7" y="5.2" width="10" height="3.6" rx="0.8" fill="currentColor" opacity=".35"/>
+    <circle cx="8.2" cy="12.2" r="0.95" fill="currentColor"/>
+    <circle cx="12" cy="12.2" r="0.95" fill="currentColor"/>
+    <circle cx="15.8" cy="12.2" r="0.95" fill="currentColor"/>
+    <circle cx="8.2" cy="15.6" r="0.95" fill="currentColor"/>
+    <circle cx="12" cy="15.6" r="0.95" fill="currentColor"/>
+    <circle cx="15.8" cy="15.6" r="0.95" fill="currentColor"/>
+    <circle cx="8.2" cy="19" r="0.95" fill="currentColor"/>
+    <rect x="11.05" y="18.15" width="5.7" height="1.7" rx="0.85" fill="currentColor"/>
+  </svg>
+</button>
+<div id="calc" class="hidden" aria-hidden="true">
+  <div class="calc-sheet" role="dialog" aria-label="เครื่องคิดเลข">
+    <div class="calc-head">
+      <b>เครื่องคิดเลข</b>
+      <button type="button" class="icon-btn" id="calcClose" title="ปิด" aria-label="ปิดเครื่องคิดเลข">×</button>
+    </div>
+    <div class="calc-hist" id="calcHist" hidden></div>
+    <div class="calc-disp">
+      <div class="calc-expr" id="calcExpr"></div>
+      <div class="calc-out" id="calcOut">0</div>
+    </div>
+    <div class="calc-keys" id="calcKeys">
+      <button type="button" data-k="C" class="k-fn">C</button>
+      <button type="button" data-k="bs" class="k-fn" aria-label="ลบ">←</button>
+      <button type="button" data-k="(" class="k-fn">(</button>
+      <button type="button" data-k=")" class="k-fn">)</button>
+      <button type="button" data-k="√" class="k-fn">√</button>
+      <button type="button" data-k="^" class="k-fn">x<sup>y</sup></button>
+      <button type="button" data-k="%" class="k-fn">%</button>
+      <button type="button" data-k="÷" class="k-op">÷</button>
+      <button type="button" data-k="7">7</button>
+      <button type="button" data-k="8">8</button>
+      <button type="button" data-k="9">9</button>
+      <button type="button" data-k="×" class="k-op">×</button>
+      <button type="button" data-k="4">4</button>
+      <button type="button" data-k="5">5</button>
+      <button type="button" data-k="6">6</button>
+      <button type="button" data-k="−" class="k-op">−</button>
+      <button type="button" data-k="1">1</button>
+      <button type="button" data-k="2">2</button>
+      <button type="button" data-k="3">3</button>
+      <button type="button" data-k="+" class="k-op">+</button>
+      <button type="button" data-k="±" class="k-fn">±</button>
+      <button type="button" data-k="0">0</button>
+      <button type="button" data-k=".">.</button>
+      <button type="button" data-k="=" class="k-eq">=</button>
+      <button type="button" data-k="Ans" class="k-ans">Ans</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 <script src="config.js"></script>
 <script src="data.js"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

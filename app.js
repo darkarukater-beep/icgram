@@ -29,6 +29,57 @@ function applyTheme(t){
   syncThemeUI(t);
 }
 function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
+
+var PRIVACY_KEY='icgram-privacy';
+function getPrivacy(){try{return localStorage.getItem(PRIVACY_KEY)==='on'}catch(e){}return false}
+function artistOn(){return !getPrivacy() && !!ART}
+function syncPrivacyUI(on){
+  on=!!on;
+  var b=$('#btnPrivacy');
+  if(b){
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-pressed',on?'true':'false');
+    b.setAttribute('aria-label',on?'ปิดโหมดส่วนตัว':'เปิดโหมดส่วนตัว');
+    b.setAttribute('title',on?'โหมดส่วนตัวกำลังใช้ · แตะเพื่อแสดงรูป':'โหมดส่วนตัว · แตะเพื่อซ่อนรูปศิลปิน');
+  }
+  $$('#privacySeg [data-privacy-set]').forEach(function(x){x.classList.toggle('on',(x.getAttribute('data-privacy-set')==='on')===on)});
+  var pv=$('#navAvatarPriv');if(pv)pv.textContent=(ME&&ME.charAt(0))?ME.charAt(0):'M';
+}
+function setNavAvatar(){
+  var img=$('#navAvatar');if(!img)return;
+  if(getPrivacy()){img.removeAttribute('src');img.alt=''}
+  else {img.src=thumb(0);img.alt=''}
+}
+function applyPrivacy(on,opts){
+  on=!!on;
+  try{localStorage.setItem(PRIVACY_KEY,on?'on':'off')}catch(e){}
+  document.documentElement.setAttribute('data-privacy',on?'on':'off');
+  syncPrivacyUI(on);
+  setNavAvatar();
+  if(opts&&opts.silent)return;
+  if(SV){try{storyGo(SV.i)}catch(e){}}
+  if(cur==='home')fpos=0;
+  if(cur==='run'&&QZ)runQuiz($('#view'));
+  else if(cur==='result')refreshResultMedia();
+  else if(cur==='chapter'&&curArg)go('chapter',curArg);
+  else if(cur)go(cur);
+}
+function togglePrivacy(){
+  var on=!getPrivacy();
+  applyPrivacy(on);
+  toast(on?'ซ่อนรูปศิลปินแล้ว':'แสดงรูปศิลปินแล้ว');
+}
+function refreshResultMedia(){
+  var v=$('#view');if(!v||cur!=='result')return;
+  var img=$('.rphoto',v), vid=$('video',v);
+  if(getPrivacy()){
+    if(img){img.removeAttribute('src');img.style.display='none'}
+    if(vid){vid.removeAttribute('src');vid.removeAttribute('autoplay');vid.style.display='none';try{vid.pause()}catch(e){}}
+  }else{
+    if(img){img.src=rphoto();img.style.display=''}
+  }
+}
+
 function load(){try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){S={}}
   S.attempts=S.attempts||[];S.best=S.best||{};S.stats=S.stats||{};S.wrong=S.wrong||{};S.liked=S.liked||{};S.seen=S.seen||{};S.answered=S.answered||{};}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -66,7 +117,7 @@ function photo(i){return 'assets/photos/'+D.photos[((i%D.photos.length)+D.photos
 function thumb(i){return photo(i).replace(/\/p(\d+)\.jpg$/,'/t$1.jpg')}
 function rphoto(){return photo(rnd(D.photos.length))}
 function hash(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return Math.abs(h)}
-function cheerName(){return NAMES.length?pick(NAMES):''}
+function cheerName(){return (!getPrivacy()&&NAMES.length)?pick(NAMES):''}
 var CHEERS_OK=['เก่งมาก! {n} ภูมิใจในตัว'+ME+'สุดๆ ✨','ผ่านฉลุย! {n} ปรบมือให้เลย 👏','สวยงาม! {n} บอกว่าวันสอบจริงก็ทำได้แน่','ปังมาก! {n} ขอเป็นกำลังใจให้ต่อไป ✨'];
 var CHEERS_TRY=['ไม่เป็นไรนะ {n} เป็นกำลังใจให้ ลองทบทวนข้อที่ผิดอีกนิด 💪','ใกล้แล้ว! {n} เชื่อว่ารอบหน้าผ่านแน่','ทุกข้อที่ผิดคือข้อที่จะจำได้ในวันสอบ — {n} สู้ไปด้วยกัน','พักหายใจแป๊บ แล้วลุยต่อ {n} รออยู่ ✨'];
 function cheer(ok){var n=cheerName();var t=pick(ok?CHEERS_OK:CHEERS_TRY);return n?t.replace('{n}',n):(ok?'เก่งมาก! สู้ๆ นะ!':'สู้ๆ นะ! ลองอีกรอบ')}
@@ -74,7 +125,10 @@ function toast(t){var e=$('#toast');e.textContent=t;e.classList.add('show');clea
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function chTitle(id){var c=CHBY[id];return c?c.id+' '+c.title:''}
 function setName(s){return D.sets[s]?D.sets[s].short:s}
-function brandName(){return ART?ART:'สู้ๆ นะ!'}
+function brandName(){return artistOn()?ART:'สู้ๆ นะ!'}
+function tone(seed){return (typeof seed==='number'?Math.abs(seed):hash(String(seed)))%4}
+function tileHTML(cls,label,seed){return '<div class="'+(cls||'')+' ph-tile tone-'+tone(seed)+'" aria-hidden="true">'+(label?('<span>'+esc(label)+'</span>'):'')+'</div>'}
+function thumbHTML(seed,label){return getPrivacy()?tileHTML('thumb',label||'IC',seed):'<img class="thumb artist" loading="lazy" src="'+thumb(typeof seed==='number'?seed:hash(String(seed)))+'" alt="">'}
 /* ---------- stats ---------- */
 function record(q,ok){var st=S.stats[q.id]||{c:0,w:0};if(ok)st.c++;else st.w++;S.stats[q.id]=st;
   if(ok){if(S.wrong[q.id])delete S.wrong[q.id]}else S.wrong[q.id]=Date.now();S.answered[q.id]=1;save()}
@@ -82,8 +136,8 @@ function chapterAcc(){var r={};D.questions.forEach(function(q){var st=S.stats[q.
 function weakTopics(){var a=chapterAcc(),out=[];for(var k in a){var t=a[k].c+a[k].w;if(t>=2)out.push({ch:k,pct:Math.round(100*a[k].c/t),t:t})}
   out.sort(function(x,y){return x.pct-y.pct});return out.filter(function(x){return x.pct<PASS}).slice(0,5)}
 /* ---------- router ---------- */
-var cur='home';
-function go(tab,arg){cur=tab;$$('#bottomnav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
+var cur='home',curArg=null;
+function go(tab,arg){cur=tab;if(arguments.length>1)curArg=arg;$$('#bottomnav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
   stopHero();window.scrollTo(0,0);var v=$('#view');v.innerHTML='';
   ({home:home,read:readList,chapter:chapter,formula:formulaPage,quiz:quizHome,run:runQuiz,review:review,profile:profile,liked:likedPage})[tab](v,arg);}
 $$('#bottomnav button').forEach(function(b){b.onclick=function(){go(b.dataset.tab)}});
@@ -91,9 +145,11 @@ $('#logo').onclick=function(){go('home')};
 $('#btnFormula').onclick=function(){go('formula')};
 $('#btnLiked').onclick=function(){go('liked')};
 $('#btnTheme').onclick=toggleTheme;
-$('#navAvatar').src=thumb(0);
+$('#btnPrivacy').onclick=togglePrivacy;
 function updLiked(){var n=Object.keys(S.liked).length;$('#likedCount').textContent=n?n:''}
 updLiked();
+syncPrivacyUI(getPrivacy());
+setNavAvatar();
 applyTheme(getTheme());
 /* ---------- HOME / FEED ---------- */
 var heroT=null;function stopHero(){if(heroT){clearInterval(heroT);heroT=null}}
@@ -101,10 +157,15 @@ function home(v){
   // notes
   var notes='<div class="notes">'+D.notes.map(function(n,i){return '<div class="note" data-i="'+i+'">'+n.short+'</div>'}).join('')+'</div>';
   // stories: chapters + formula decks
-  var st='<div class="stories">'+D.stories.map(function(s,i){return '<button class="st" data-s="'+i+'"><div class="ring'+(S.seen[s.id]?' seen':'')+'"><img loading="lazy" src="'+thumb(s.photo)+'" alt=""></div><span class="sl">'+esc(s.label)+'</span></button>'}).join('')+'</div>';
+  var st='<div class="stories">'+D.stories.map(function(s,i){
+    var inner=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,8),i):'<img loading="lazy" class="artist" src="'+thumb(s.photo)+'" alt="">';
+    return '<button class="st" data-s="'+i+'"><div class="ring'+(S.seen[s.id]?' seen':'')+'">'+inner+'</div><span class="sl">'+esc(s.label)+'</span></button>';
+  }).join('')+'</div>';
   var tot=S.attempts.length, ans=Object.keys(S.answered).length, best=Math.max.apply(null,[0].concat(Object.keys(S.best).map(function(k){return S.best[k]})));
   var wk=weakTopics();
-  var dash='<section class="dash"><div class="hero"><img id="h1" src="'+photo(0)+'" alt=""><img id="h2" src="'+photo(1)+'" style="opacity:0" alt=""><div class="shade"></div><div class="htxt"><h2>'+'สู้ๆ นะ '+esc(ME)+'! 🤍'+'</h2><p>ICgram'+(ART?' · ธีม '+esc(ART):'')+' · เป้าหมาย: สอบ IC Plain (P1) ผ่าน ≥ '+PASS+'% · วันนี้อ่านนิด ทำข้อสอบหน่อยก็พอ</p></div></div>'+
+  var heroInner=getPrivacy()?tileHTML('hero-tile','',0)+'<div class="shade"></div>'
+    :'<img id="h1" class="artist" src="'+photo(0)+'" alt=""><img id="h2" class="artist" src="'+photo(1)+'" style="opacity:0" alt=""><div class="shade"></div>';
+  var dash='<section class="dash"><div class="hero'+(getPrivacy()?' privacy-hero':'')+'">'+heroInner+'<div class="htxt"><h2>'+'สู้ๆ นะ '+esc(ME)+'! 🤍'+'</h2><p>ICgram'+(artistOn()?' · ธีม '+esc(ART):'')+' · เป้าหมาย: สอบ IC Plain (P1) ผ่าน ≥ '+PASS+'% · วันนี้อ่านนิด ทำข้อสอบหน่อยก็พอ</p></div></div>'+
    '<div class="stats"><div><b>'+tot+'</b><span>ชุดที่ทำแล้ว</span></div><div><b>'+ans+'/'+D.questions.length+'</b><span>ข้อที่เคยตอบ</span></div><div><b>'+(tot?best+'%':'–')+'</b><span>คะแนนสูงสุด</span></div></div>'+
    '<div class="weak">'+(wk.length?'<b>หัวข้อที่ควรทวน:</b><br>'+wk.map(function(w){return '<button class="chip" data-ch="'+w.ch+'">'+esc(chTitle(w.ch))+' · '+w.pct+'%</button>'}).join(''):'<span class="muted">ทำข้อสอบสักชุด แล้วระบบจะบอกหัวข้อที่ควรทวนให้ตรงนี้</span>')+
    '<div style="margin-top:8px"><button class="btn pri sm" id="goQuiz">เริ่มทำข้อสอบ</button><button class="btn sm" id="goRead">อ่านเนื้อหา</button><button class="btn sm" id="goF">ชีตสูตร</button></div></div></section>';
@@ -113,7 +174,7 @@ function home(v){
   $$('.st',v).forEach(function(e){e.onclick=function(){openStory(+e.dataset.s)}});
   $$('.chip[data-ch]',v).forEach(function(e){e.onclick=function(){go('chapter',e.dataset.ch)}});
   $('#goQuiz').onclick=function(){go('quiz')};$('#goRead').onclick=function(){go('read')};$('#goF').onclick=function(){go('formula')};
-  var k=1;heroT=setInterval(function(){var a=$('#h1'),b=$('#h2');if(!a){stopHero();return}k++;var top=(k%2)?a:b,bot=(k%2)?b:a;bot.src=photo(rnd(D.photos.length));setTimeout(function(){bot.style.opacity=1;top.style.opacity=0},300)},5000);
+  if(!getPrivacy()){var k=1;heroT=setInterval(function(){var a=$('#h1'),b=$('#h2');if(!a){stopHero();return}k++;var top=(k%2)?a:b,bot=(k%2)?b:a;bot.src=photo(rnd(D.photos.length));setTimeout(function(){bot.style.opacity=1;top.style.opacity=0},300)},5000)}
   buildFeed();renderFeed(12);$('#more').onclick=function(){renderFeed(10)};
 }
 var FEED=[],fpos=0;
@@ -129,12 +190,13 @@ function buildFeed(){
 }
 function postHTML(p,idx){
   var pi=hash(p.id)%D.photos.length, liked=!!S.liked[p.id];
-  var who='icgram.mill', sub, body, cap='';
-  if(p.type==='lesson'){sub='สรุปบท '+chTitle(p.ch);body='<div class="tag">LESSON · บท '+p.ch+'</div><h3>'+esc(CHBY[p.ch].title)+'</h3><div>'+p.html+'</div>';cap='<b>'+esc(who)+'</b> อ่านแค่โพสต์เดียวก็ได้ 1 คะแนนความรู้ 📚';}
-  else if(p.type==='formula'){sub='สูตรเด็ด';body='<div class="tag">FORMULA</div><h3>'+p.f.title+'</h3>'+p.f.html+(p.f.vars?'<div class="muted" style="font-size:12.5px">'+p.f.vars+'</div>':'');cap='<b>'+esc(who)+'</b> สูตรนี้จำให้ขึ้นใจ แล้วไปลองทำโจทย์กัน ✨';}
-  else {var q=p.q;sub=setName(q.set)+' ข้อ '+q.n;body='<div class="tag">QUIZ · '+esc(setName(q.set))+' ข้อ '+q.n+'</div><div class="qstem">'+q.stem+'</div>'+q.choices.map(function(c,j){return '<button class="choice" data-j="'+j+'"><span class="cl">'+L[j]+'</span>'+c+'</button>'}).join('');cap='<b>'+esc(who)+'</b> ตอบในโพสต์ได้เลย แล้วดูเฉลยในคอมเมนต์ 👇';}
+  var who='icgram.mill', sub, body, cap='', tileLab='ICgram';
+  if(p.type==='lesson'){sub='สรุปบท '+chTitle(p.ch);body='<div class="tag">LESSON · บท '+p.ch+'</div><h3>'+esc(CHBY[p.ch].title)+'</h3><div>'+p.html+'</div>';cap='<b>'+esc(who)+'</b> อ่านแค่โพสต์เดียวก็ได้ 1 คะแนนความรู้ 📚';tileLab='บท '+p.ch;}
+  else if(p.type==='formula'){sub='สูตรเด็ด';body='<div class="tag">FORMULA</div><h3>'+p.f.title+'</h3>'+p.f.html+(p.f.vars?'<div class="muted" style="font-size:12.5px">'+p.f.vars+'</div>':'');cap='<b>'+esc(who)+'</b> สูตรนี้จำให้ขึ้นใจ แล้วไปลองทำโจทย์กัน ✨';tileLab='สูตร';}
+  else {var q=p.q;sub=setName(q.set)+' ข้อ '+q.n;body='<div class="tag">QUIZ · '+esc(setName(q.set))+' ข้อ '+q.n+'</div><div class="qstem">'+q.stem+'</div>'+q.choices.map(function(c,j){return '<button class="choice" data-j="'+j+'"><span class="cl">'+L[j]+'</span>'+c+'</button>'}).join('');cap='<b>'+esc(who)+'</b> ตอบในโพสต์ได้เลย แล้วดูเฉลยในคอมเมนต์ 👇';tileLab='ข้อสอบ';}
+  var media=getPrivacy()?tileHTML('',tileLab,hash(p.id)):'<img loading="lazy" class="artist" src="'+photo(pi)+'" alt="">';
   return '<article class="post" data-id="'+p.id+'"><div class="ph"><span class="av">IC</span><div class="who">'+esc(who)+'<small>'+esc(sub)+'</small></div></div>'+
-   '<div class="pmedia"><img loading="lazy" src="'+photo(pi)+'" alt=""><div class="overlay">'+body+'</div></div>'+
+   '<div class="pmedia">'+media+'<div class="overlay">'+body+'</div></div>'+
    '<div class="pbar"><button class="like'+(liked?' liked':'')+'">'+(liked?'♥\uFE0E':'♡\uFE0E')+'</button><button class="cm" title="เฉลย/คอมเมนต์">💬</button><button class="save" title="บันทึกไว้ทบทวน">'+(liked?'🔖':'📑')+'</button></div>'+
    '<div class="pcap">'+cap+'</div><div class="comments"></div></article>';
 }
@@ -166,14 +228,17 @@ function closeModal(){$('#modal').classList.add('hidden')}
 var SV=null;
 function openStory(si){var s=D.stories[si];S.seen[s.id]=1;save();var el=$('#story');el.classList.remove('hidden');document.body.style.overflow='hidden';
   SV={si:si,i:0,t:null,start:0,paused:false,dur:7000};
-  el.innerHTML='<div class="sv"><div class="bg"></div><div class="bars">'+s.slides.map(function(){return '<span><i></i></span>'}).join('')+'</div><div class="shead"><img src="'+thumb(s.photo)+'"><span>'+esc(s.label)+'</span><button class="x">×</button></div><div class="tapL"></div><div class="tapR"></div><div class="sbody"></div></div>';
+  var headMedia=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,2),si):'<img class="artist" src="'+thumb(s.photo)+'" alt="">';
+  el.innerHTML='<div class="sv"><div class="bg"></div><div class="bars">'+s.slides.map(function(){return '<span><i></i></span>'}).join('')+'</div><div class="shead">'+headMedia+'<span>'+esc(s.label)+'</span><button class="x">×</button></div><div class="tapL"></div><div class="tapR"></div><div class="sbody"></div></div>';
   $('.x',el).onclick=closeStory;$('.tapL',el).onclick=function(){storyGo(SV.i-1)};$('.tapR',el).onclick=function(){storyGo(SV.i+1)};
   var hold=function(on){SV.paused=on};$('.sbody',el).addEventListener('touchstart',function(){hold(true)},{passive:true});$('.sbody',el).addEventListener('touchend',function(){hold(false)});
   $('.sbody',el).addEventListener('mousedown',function(){hold(true)});$('.sbody',el).addEventListener('mouseup',function(){hold(false)});
   storyGo(0);}
 function storyGo(i){var s=D.stories[SV.si];if(i<0)i=0;if(i>=s.slides.length){var n=SV.si+1;if(n<D.stories.length){openStory(n)}else closeStory();return}
   SV.i=i;var el=$('#story');$$('.bars i',el).forEach(function(b,k){b.style.width=k<i?'100%':'0'});
-  $('.bg',el).style.backgroundImage='url('+photo(s.photo+i*7)+')';
+  var bg=$('.bg',el);
+  if(getPrivacy()){bg.style.backgroundImage='none'}
+  else {bg.style.backgroundImage='url('+photo(s.photo+i*7)+')'}
   var sl=s.slides[i];$('.sbody',el).innerHTML='<div class="scard">'+sl.html+'</div>';
   var fb=$('.flip',el);if(fb)fb.onclick=function(e){e.stopPropagation();var a=$('.ans',el);a.classList.toggle('hidden');SV.paused=!a.classList.contains('hidden')};
   SV.start=Date.now();SV.acc=0;cancelAnimationFrame(SV.t);var bar=$$('.bars i',el)[i];
@@ -184,10 +249,10 @@ document.addEventListener('keydown',function(e){if(!SV)return;if(e.key==='ArrowR
 function readList(v){var acc=chapterAcc();
   var h='<div class="page"><h1>📖 อ่านเนื้อหา</h1><p class="muted">เรียงตามโครงสร้างข้อสอบ (หมวด 1 พื้นฐาน → หมวด 2 กฎ/จรรยาบรรณ → หมวด 3 ผลิตภัณฑ์) ข้างในแต่ละบทเรียงจากง่ายไปยาก: สรุปสั้น → สไลด์ติว → ใบสรุป → ข้อสอบ</p>'+
   '<div class="card tap" id="toF"><div class="row"><div class="thumb ico-sum">∑</div><div><b>ชีตสรุปสูตร IC P1</b><div class="muted">สูตรทั้งหมดพร้อมความหมายตัวแปรและตัวอย่าง (จุดอ่อนของเรา → อ่านบ่อยๆ)</div></div></div></div>'+
-  '<div class="card tap" id="toInfo"><div class="row"><img class="thumb" src="'+thumb(5)+'"><div><b>โครงสร้างข้อสอบ</b><div class="muted">'+D.examInfo.short+'</div></div></div></div>';
+  '<div class="card tap" id="toInfo"><div class="row">'+thumbHTML(5,'ข้อสอบ')+'<div><b>โครงสร้างข้อสอบ</b><div class="muted">'+D.examInfo.short+'</div></div></div></div>';
   D.parts.forEach(function(p){h+='<div class="part-h"><span class="pill">หมวด '+p.id+'</span>'+esc(p.title)+' <span class="muted">('+p.count+' ข้อ)</span></div>';
     D.chapters.filter(function(c){return c.part===p.id}).forEach(function(c,i){var a=acc[c.id],pct=a?Math.round(100*a.c/(a.c+a.w)):null;
-      h+='<div class="card tap" data-ch="'+c.id+'"><div class="row"><img class="thumb" loading="lazy" src="'+thumb(hash(c.id))+'"><div style="flex:1;min-width:0"><b>บท '+c.id+' '+esc(c.title)+'</b><div class="muted">ออกสอบ ~'+c.n+' ข้อ · ข้อสอบฝึกในเว็บ '+c.qcount+' ข้อ'+(pct!==null?' · ตอบถูก '+pct+'%':'')+'</div>'+(pct!==null?'<div class="prog"><i style="width:'+pct+'%"></i></div>':'')+'</div></div></div>'})});
+      h+='<div class="card tap" data-ch="'+c.id+'"><div class="row">'+thumbHTML(hash(c.id),c.id)+'<div style="flex:1;min-width:0"><b>บท '+c.id+' '+esc(c.title)+'</b><div class="muted">ออกสอบ ~'+c.n+' ข้อ · ข้อสอบฝึกในเว็บ '+c.qcount+' ข้อ'+(pct!==null?' · ตอบถูก '+pct+'%':'')+'</div>'+(pct!==null?'<div class="prog"><i style="width:'+pct+'%"></i></div>':'')+'</div></div></div>'})});
   v.innerHTML=h+'</div>';
   $('#toF').onclick=function(){go('formula')};$('#toInfo').onclick=function(){modal(D.examInfo.full+'<div style="margin-top:10px"><button class="btn pri" id="mclose">ปิด</button></div>')};
   $$('.card[data-ch]',v).forEach(function(e){e.onclick=function(){go('chapter',e.dataset.ch)}});}
@@ -198,7 +263,7 @@ function chapter(v,id){var c=CHBY[id];var tabs=[['kp','สรุปสั้น'
     if(t==='kp')b.innerHTML='<div class="card"><ul class="kp">'+c.kp.map(function(k){return '<li>'+k+'</li>'}).join('')+'</ul><div class="muted" style="margin-top:8px">ที่มา: '+esc(c.kpsrc)+'</div></div>'+(c.formulas.length?'<h2>สูตรที่เกี่ยวข้อง</h2>'+c.formulas.map(function(fid){var f=D.formulas.filter(function(x){return x.id===fid})[0];return f?'<div class="card">'+'<b>'+f.title+'</b>'+f.html+(f.vars?'<div class="muted">'+f.vars+'</div>':'')+'</div>':''}).join(''):'')+'<button class="btn pri" id="qz2">ทำข้อสอบบทนี้</button>';
     else if(t==='sl')b.innerHTML='<p class="muted">สไลด์จาก “เอกสารติวสอบ IC” · หน้าที่เขียนว่า “ตัวอย่างข้อสอบ” ในเอกสารไม่มีเฉลย ลองคิดเองก่อนนะ</p><div class="imgs">'+c.slides.map(function(s){return '<img loading="lazy" src="assets/slides/'+s+'" alt="">'}).join('')+'</div>';
     else if(t==='sh')b.innerHTML='<p class="muted">ใบสรุปลายมือ อ.ยีน (บทละ 1 หน้า) · แตะรูปเพื่อเปิดเต็มจอแล้วซูมได้</p><div class="imgs"><a href="assets/sheets/'+c.sheet+'" target="_blank"><img loading="lazy" src="assets/sheets/'+c.sheet+'" alt=""></a></div>';
-    else if(t==='bk')b.innerHTML='<p class="muted">หน้าหนังสือ “หนังสือสรุปเนื้อหาพร้อมสอบ IC PLAIN (P1)” ที่ตรงกับบทนี้ (อาจมีบทข้างเคียงติดมาในหน้าเดียวกัน) · แตะเพื่อซูม</p><div class="imgs">'+c.book.map(function(s){return '<a href="assets/book/'+s+'" target="_blank"><img loading="lazy" src="assets/book/'+s+'" alt=""></a>'}).join('')+'</div>';
+    else if(t==='bk')b.innerHTML='<p class="muted">หน้าหนังสือ “หนังสือสรุปเนื้อหาพร้อมสอบ IC PLAIN (P1)” ที่ตรงกับบทนี้ (อาจมีบทข้างเคียงติดมาในหน้าเดียวกัน) · แตะเพื่อซูม</p><div class="imgs">'+c.book.map(function(s){return '<a href="assets/book/'+s+'" target="_blank"><img loading="lazy" src="assets/book/'+s+'" alt="">'}).join('')+'</div>';
     else {startQuiz({mode:'ch',ch:c.id});return}
     var q2=$('#qz2');if(q2)q2.onclick=function(){startQuiz({mode:'ch',ch:c.id})};}
   $$('.seg button',v).forEach(function(b){b.onclick=function(){show(b.dataset.t)}});show('kp');}
@@ -208,8 +273,8 @@ var QZ=null;
 function quizHome(v){var b=function(k){return S.best[k]!=null?' · ดีที่สุด '+S.best[k]+'%':''};
   var h='<div class="page"><h1>＋ ข้อสอบ</h1><p class="muted">ตอบแล้วรู้ผลทันทีพร้อมเฉลย · เกณฑ์ผ่าน '+PASS+'% · ข้อที่ตอบผิดจะไปอยู่ในหน้า “ทบทวน” อัตโนมัติ</p>'+
   '<label class="muted" style="display:flex;align-items:center;gap:6px;margin:6px 0"><input type="checkbox" id="tmr"'+(S.timer?' checked':'')+'> จับเวลา (1.5 นาที/ข้อ ตามเวลาสอบจริง 150 นาที/100 ข้อ)</label>';
-  Object.keys(D.sets).forEach(function(k){var s=D.sets[k];h+='<div class="card"><div class="row"><img class="thumb" src="'+thumb(hash(k)+2)+'"><div style="flex:1"><b>'+esc(s.title)+'</b><div class="muted">'+esc(s.desc)+b(k)+'</div></div></div><button class="btn pri sm" data-set="'+k+'">เริ่ม ('+s.count+' ข้อ)</button><button class="btn sm" data-set="'+k+'" data-sh="1">สุ่มลำดับ</button></div>'});
-  h+='<div class="card"><div class="row"><img class="thumb" src="'+thumb(9)+'"><div><b>โหมดสุ่มรวม (Mixed)</b><div class="muted">สุ่มจากทุกชุด'+b('mix')+'</div></div></div><button class="btn pri sm" data-mix="10">10 ข้อ</button><button class="btn sm" data-mix="20">20 ข้อ</button><button class="btn sm" data-mix="40">40 ข้อ</button></div>';
+  Object.keys(D.sets).forEach(function(k){var s=D.sets[k];h+='<div class="card"><div class="row">'+thumbHTML(hash(k)+2,s.short||'ชุด')+'<div style="flex:1"><b>'+esc(s.title)+'</b><div class="muted">'+esc(s.desc)+b(k)+'</div></div></div><button class="btn pri sm" data-set="'+k+'">เริ่ม ('+s.count+' ข้อ)</button><button class="btn sm" data-set="'+k+'" data-sh="1">สุ่มลำดับ</button></div>'});
+  h+='<div class="card"><div class="row">'+thumbHTML(9,'สุ่ม')+'<div><b>โหมดสุ่มรวม (Mixed)</b><div class="muted">สุ่มจากทุกชุด'+b('mix')+'</div></div></div><button class="btn pri sm" data-mix="10">10 ข้อ</button><button class="btn sm" data-mix="20">20 ข้อ</button><button class="btn sm" data-mix="40">40 ข้อ</button></div>';
   h+='<div class="card"><b>ตามบท</b><div class="muted">เลือกบทที่อยากฝึก</div><div style="margin-top:6px">'+D.chapters.filter(function(c){return c.qcount}).map(function(c){return '<button class="chip lav" data-ch="'+c.id+'">'+c.id+' ('+c.qcount+')</button>'}).join('')+'</div></div>';
   var nw=Object.keys(S.wrong).length;h+='<div class="card"><b>ทำข้อที่เคยผิดอีกรอบ</b><div class="muted">'+nw+' ข้อในรายการทบทวน</div><button class="btn pri sm" id="redo"'+(nw?'':' disabled')+'>เริ่ม</button></div>';
   h+='<h2>ประวัติ</h2>'+(S.attempts.length?S.attempts.slice(-8).reverse().map(function(a){return '<div class="bar2"><span class="lbl">'+esc(a.title)+'</span><div class="prog"><i style="width:'+a.pct+'%"></i></div><span class="pc">'+a.pct+'%</span></div>'}).join(''):'<p class="muted">ยังไม่มี — เริ่มชุดแรกกันเลย!</p>');
@@ -243,8 +308,8 @@ function finish(){clearInterval(clockT);if(!QZ)return;var tot=QZ.qs.length,c=0,a
   var wrongs=QZ.qs.filter(function(q,i){return QZ.ans[i]!=null&&QZ.ans[i]!==q.ans});
   var byCh={};QZ.qs.forEach(function(q,i){var b=byCh[q.ch]||(byCh[q.ch]={c:0,t:0});b.t++;if(QZ.ans[i]===q.ans)b.c++});
   var v=$('#view');cur='result';window.scrollTo(0,0);
-  v.innerHTML='<div class="page result"><img class="rphoto" src="'+rphoto()+'" alt=""><div class="score">'+c+'/'+tot+' · '+pct+'%</div><div class="'+(ok?'verdict ok':'verdict bad')+'">'+(ok?'ผ่านเกณฑ์ '+PASS+'% 🎉':'ยังไม่ถึง '+PASS+'% (ต้องได้ '+Math.ceil(tot*PASS/100)+' ข้อ)')+'</div><div class="cheer">'+esc(cheer(ok))+'</div>'+
-  (ok?'<video src="assets/cheer.mp4" autoplay muted loop playsinline></video>':'')+
+  v.innerHTML='<div class="page result">'+(getPrivacy()?'':'<img class="rphoto artist" src="'+rphoto()+'" alt="">')+'<div class="score">'+c+'/'+tot+' · '+pct+'%</div><div class="'+(ok?'verdict ok':'verdict bad')+'">'+(ok?'ผ่านเกณฑ์ '+PASS+'% 🎉':'ยังไม่ถึง '+PASS+'% (ต้องได้ '+Math.ceil(tot*PASS/100)+' ข้อ)')+'</div><div class="cheer">'+esc(cheer(ok))+'</div>'+
+  (ok&&!getPrivacy()?'<video src="assets/cheer.mp4" autoplay muted loop playsinline></video>':'')+
   (ansd<tot?'<p class="muted">ตอบไป '+ansd+' จาก '+tot+' ข้อ (ข้อที่ไม่ได้ตอบนับว่าผิด)</p>':'')+
   '<div class="card" style="text-align:left"><b>คะแนนรายบท</b>'+Object.keys(byCh).sort().map(function(k){var b=byCh[k],p=Math.round(100*b.c/b.t);return '<div class="bar2"><span class="lbl">'+esc(chTitle(k))+'</span><div class="prog"><i style="width:'+p+'%"></i></div><span class="pc">'+b.c+'/'+b.t+'</span></div>'}).join('')+'</div>'+
   (wrongs.length?'<div class="card" style="text-align:left"><b>ข้อที่ตอบผิด ('+wrongs.length+')</b> <span class="muted">เก็บไว้ในหน้า “ทบทวน” แล้ว</span>'+wrongs.map(function(q){return '<div style="border-top:1px solid var(--line);margin-top:8px;padding-top:8px"><div class="muted">'+esc(setName(q.set))+' ข้อ '+q.n+'</div><div class="qstem">'+q.stem+'</div><div class="verdict ok">คำตอบ: ข้อ '+L[q.ans]+' '+q.choices[q.ans]+'</div></div>'}).join('')+'</div>':'')+
@@ -261,13 +326,15 @@ function likedItems(){return Object.keys(S.liked).sort(function(a,b){return S.li
   if(id[0]==='F'){var f=D.formulas.filter(function(x){return 'F'+x.id===id})[0];return f?{id:id,label:'สูตร: '+f.title.replace(/<[^>]+>/g,''),html:'<b>'+f.title+'</b>'+f.html+(f.vars?'<div class="muted">'+f.vars+'</div>':'')}:null}
   if(id[0]==='L'){var m=id.slice(1).split('_'),c=CHBY[m[0]];return c?{id:id,label:'บท '+c.id+' สรุป',html:'<b>บท '+c.id+' '+esc(c.title)+'</b><p>'+c.kp[+m[1]]+'</p>'}:null}
   return null}).filter(Boolean)}
-function gridHTML(items){return '<div class="grid3">'+items.map(function(it,i){return '<div class="gi" data-i="'+i+'"><img loading="lazy" src="'+thumb(hash(it.id))+'"><span>'+esc(it.label)+'</span></div>'}).join('')+'</div>'}
+function gridHTML(items){return '<div class="grid3">'+items.map(function(it,i){var media=getPrivacy()?tileHTML('', '', hash(it.id)):'<img loading="lazy" class="artist" src="'+thumb(hash(it.id))+'" alt="">';return '<div class="gi" data-i="'+i+'">'+media+'<span>'+esc(it.label)+'</span></div>'}).join('')+'</div>'}
 function wireGrid(v,items){$$('.gi',v).forEach(function(g){g.onclick=function(){var it=items[+g.dataset.i];modal(it.html+'<div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button><button class="btn" id="unlike">♡ เอาออก</button></div>');$('#unlike').onclick=function(){toggleLike(it.id,null);closeModal();go(cur)}}})}
 function likedPage(v){var it=likedItems();v.innerHTML='<div class="page"><h1>♥ ที่บันทึกไว้</h1><p class="muted">กดหัวใจในฟีดหรือในข้อสอบเพื่อเก็บไว้ที่นี่</p></div>'+(it.length?gridHTML(it):'<div class="page"><div class="card">ยังไม่มีโพสต์ที่บันทึกไว้</div></div>');wireGrid(v,it)}
 function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;var nC=0,nW=0;for(var k in S.stats){nC+=S.stats[k].c;nW+=S.stats[k].w}
-  var h='<div class="prof"><div class="ring"><img src="'+thumb(0)+'"></div><div class="pst"><div><b>'+tot+'</b><span>ชุดข้อสอบ</span></div><div><b>'+(nC+nW?Math.round(100*nC/(nC+nW))+'%':'–')+'</b><span>ตอบถูกรวม</span></div><div><b>'+it.length+'</b><span>บันทึก</span></div></div></div>'+
-  '<div class="page" style="padding-top:0"><b>'+esc(ME)+'</b> · ติวสอบ IC Plain (P1)'+(ART?' · ทีม '+esc(NAMES.join(' / ')||ART):'')+'<div class="muted">เป้าหมาย ≥ '+PASS+'% · อ่านวันอาทิตย์ทีละนิดก็ถึงได้</div>'+
+  var av=getPrivacy()?tileHTML('',(ME&&ME.charAt(0))||'M',0):'<img class="artist" src="'+thumb(0)+'" alt="">';
+  var h='<div class="prof"><div class="ring">'+av+'</div><div class="pst"><div><b>'+tot+'</b><span>ชุดข้อสอบ</span></div><div><b>'+(nC+nW?Math.round(100*nC/(nC+nW))+'%':'–')+'</b><span>ตอบถูกรวม</span></div><div><b>'+it.length+'</b><span>บันทึก</span></div></div></div>'+
+  '<div class="page" style="padding-top:0"><b>'+esc(ME)+'</b> · ติวสอบ IC Plain (P1)'+(artistOn()?' · ทีม '+esc(NAMES.join(' / ')||ART):'')+'<div class="muted">เป้าหมาย ≥ '+PASS+'% · อ่านวันอาทิตย์ทีละนิดก็ถึงได้</div>'+
   '<h2>ธีม</h2><div class="seg" id="themeSeg"><button type="button" data-theme-set="dark">โทนดำ</button><button type="button" data-theme-set="light">โทนขาว</button></div><p class="muted">ใช้โทนเดียวกันทั้งเว็บ ระบบจำค่าที่เลือกไว้ให้</p>'+
+  '<h2>โหมดส่วนตัว</h2><div class="seg" id="privacySeg"><button type="button" data-privacy-set="off">แสดงรูป</button><button type="button" data-privacy-set="on">ซ่อนรูปศิลปิน</button></div><p class="muted">เวลาอ่านข้างนอก ซ่อนรูปและชื่อศิลปินได้ ระบบจำค่าที่เลือกไว้ให้ และรวมในรหัสสำรองด้วย</p>'+
   '<h2>คะแนนสูงสุด</h2>'+Object.keys(D.sets).concat(['mix']).map(function(k){var p=S.best[k];return '<div class="bar2"><span class="lbl">'+esc(k==='mix'?'สุ่มรวม':D.sets[k].title)+'</span><div class="prog"><i style="width:'+(p||0)+'%"></i></div><span class="pc">'+(p!=null?p+'%':'–')+'</span></div>'}).join('')+
   '<h2>ความแม่นรายบท</h2>'+(Object.keys(acc).length?D.chapters.filter(function(c){return acc[c.id]}).map(function(c){var a=acc[c.id],p=Math.round(100*a.c/(a.c+a.w));return '<div class="bar2"><span class="lbl">'+esc(c.id+' '+c.title)+'</span><div class="prog"><i style="width:'+p+'%;'+(p<PASS?'background:var(--bad)':'')+'"></i></div><span class="pc">'+p+'%</span></div>'}).join(''):'<p class="muted">ยังไม่มีข้อมูล</p>')+
   '<h2>ข้อที่ผิดค้างอยู่</h2><button class="btn" id="toRev">ดู '+Object.keys(S.wrong).length+' ข้อในหน้าทบทวน</button>'+
@@ -278,6 +345,8 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
   v.innerHTML=h;wireGrid(v,it);$('#toRev').onclick=function(){go('review')};
   $$('#themeSeg [data-theme-set]').forEach(function(b){b.onclick=function(){applyTheme(b.getAttribute('data-theme-set'))}});
   syncThemeUI(getTheme());
+  $$('#privacySeg [data-privacy-set]').forEach(function(b){b.onclick=function(){var on=b.getAttribute('data-privacy-set')==='on';applyPrivacy(on);toast(on?'ซ่อนรูปศิลปินแล้ว':'แสดงรูปศิลปินแล้ว')}});
+  syncPrivacyUI(getPrivacy());
   var code=backupCode();$('#bakOut').value=code;
   $('#bakCopy').onclick=function(){copyText(code,'คัดลอกแล้ว')};
   if(navigator.share){var sh=$('#bakShare');sh.hidden=false;sh.onclick=function(){navigator.share({title:'ICgram สำรองความคืบหน้า',text:code}).then(function(){toast('แชร์แล้ว')}).catch(function(){})}};
@@ -285,6 +354,152 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
     if(!confirm('รวมความคืบหน้าจากรหัสนี้เข้าเครื่องนี้? คะแนนสูงสุดจะเก็บค่าที่ดีกว่า และประวัติข้อสอบจะถูกรวมกัน'))return;
     try{applyBackup(parsed.d);toast('โหลดแล้ว');location.reload()}catch(e){toast('โหลดไม่สำเร็จ')}};
   $('#reset').onclick=function(){if(confirm('ล้างคะแนน ประวัติ และรายการบันทึกทั้งหมด?')){localStorage.removeItem(KEY);load();updLiked();go('profile')}};}
-window.ICG={go:go,startQuiz:startQuiz,qz:function(){return QZ},backupCode:backupCode,parseBackup:parseBackup,applyBackup:applyBackup,KEY:KEY,THEME_KEY:THEME_KEY,getTheme:getTheme,applyTheme:applyTheme};
+/* ---------- calculator ---------- */
+function calcEval(str){
+  var s=String(str||'').replace(/\s+/g,'').replace(/×/g,'*').replace(/[÷／]/g,'/').replace(/[−–]/g,'-');
+  if(!s)throw new Error('empty');
+  var tok=[],i=0;
+  while(i<s.length){
+    var c=s[i];
+    if(/[0-9.]/.test(c)){
+      var n=c,j=i+1,dot=(c==='.');
+      while(j<s.length&&/[0-9.]/.test(s[j])){if(s[j]==='.'){if(dot)throw new Error('num');dot=true}n+=s[j++]}
+      if(n==='.'||n==='')throw new Error('num');
+      tok.push({t:'n',v:parseFloat(n)});i=j;continue;
+    }
+    if((c==='a'||c==='A')&&s.slice(i,i+3).toLowerCase()==='ans'){tok.push({t:'ans'});i+=3;continue}
+    if(c==='√'||s.slice(i,i+4).toLowerCase()==='sqrt'){if(c==='√')i++;else i+=4;tok.push({t:'sqrt'});continue}
+    if('+-*/^()%'.indexOf(c)>=0){tok.push({t:c});i++;continue}
+    throw new Error('char');
+  }
+  var p=0;
+  function peek(){return tok[p]}
+  function eat(k){var x=tok[p];if(!x)return null;if(k&&x.t!==k)return null;p++;return x}
+  function expr(){var v=term();while(peek()&&(peek().t==='+'||peek().t==='-')){var op=eat().t,r=term();v=op==='+'?v+r:v-r}return v}
+  function term(){var v=power();while(peek()&&(peek().t==='*'||peek().t==='/')){var op=eat().t,r=power();if(op==='/'){if(r===0)throw new Error('div0');v=v/r}else v=v*r}return v}
+  function power(){var v=unary();if(peek()&&peek().t==='^'){eat();var r=power();v=Math.pow(v,r)}return v}
+  function unary(){
+    if(peek()&&peek().t==='+'){eat();return unary()}
+    if(peek()&&peek().t==='-'){eat();return -unary()}
+    if(peek()&&peek().t==='sqrt'){eat();var v=unary();if(v<0)throw new Error('sqrt');return Math.sqrt(v)}
+    return primary();
+  }
+  function primary(){
+    if(!peek())throw new Error('end');
+    var v;
+    if(peek().t==='n'){v=eat().v}
+    else if(peek().t==='ans'){eat();if(CALC.ans==null)throw new Error('ans');v=CALC.ans}
+    else if(peek().t==='('){eat();v=expr();if(!eat(')'))throw new Error('paren')}
+    else throw new Error('syn');
+    if(peek()&&peek().t==='%'){eat();v=v/100}
+    return v;
+  }
+  var v=expr();
+  if(p<tok.length)throw new Error('trail');
+  if(typeof v!=='number'||!isFinite(v))throw new Error('num');
+  return v;
+}
+function calcFmt(n){
+  if(typeof n!=='number'||!isFinite(n))return 'Error';
+  if(Object.is(n,-0))n=0;
+  var a=Math.abs(n);
+  if(a!==0&&(a>=1e12||a<1e-8))return n.toExponential(8).replace(/\.?0+e/,'e').replace(/e\+/,'e');
+  var s=Number(n.toPrecision(12)).toString();
+  return s;
+}
+function calcErrMsg(e){
+  var k=e&&e.message;
+  if(k==='div0')return 'หารด้วยศูนย์ไม่ได้';
+  if(k==='sqrt')return 'ถอดรูทจำนวนลบไม่ได้';
+  if(k==='ans')return 'ยังไม่มี Ans';
+  if(k==='empty')return 'ใส่ตัวเลขก่อน';
+  return 'รูปแบบไม่ถูกต้อง';
+}
+var CALC={expr:'',ans:null,hist:[],fresh:false,open:false};
+function calcRender(){
+  var ex=$('#calcExpr'),out=$('#calcOut'),h=$('#calcHist');
+  if(!ex)return;
+  ex.textContent=CALC.expr||'';
+  if(CALC._err){out.textContent=CALC._err;out.classList.add('err')}
+  else {out.textContent=CALC._preview!=null?CALC._preview:(CALC.fresh&&CALC.ans!=null?calcFmt(CALC.ans):'0');out.classList.remove('err')}
+  if(h){
+    if(!CALC.hist.length){h.hidden=true;h.innerHTML=''}
+    else {h.hidden=false;h.innerHTML=CALC.hist.map(function(it,i){return '<button type="button" data-h="'+i+'">'+esc(calcFmt(it.v))+'</button>'}).join('');
+      $$('button',h).forEach(function(b){b.onclick=function(){var it=CALC.hist[+b.dataset.h];if(!it)return;if(CALC.fresh)CALC.expr='';CALC.fresh=false;CALC.expr+=calcFmt(it.v);CALC._err=null;calcPreview();calcRender()}})}
+  }
+}
+function calcPreview(){
+  CALC._preview=null;
+  if(!CALC.expr||CALC._err)return;
+  try{CALC._preview=calcFmt(calcEval(CALC.expr))}catch(e){CALC._preview=null}
+}
+function calcOpen(){
+  CALC.open=true;
+  var el=$('#calc');el.classList.remove('hidden');el.setAttribute('aria-hidden','false');
+  document.body.classList.add('calc-open');
+  $('#calcFab').setAttribute('aria-expanded','true');
+  calcRender();
+}
+function calcClose(){
+  CALC.open=false;
+  var el=$('#calc');el.classList.add('hidden');el.setAttribute('aria-hidden','true');
+  document.body.classList.remove('calc-open');
+  $('#calcFab').setAttribute('aria-expanded','false');
+}
+function calcToggle(){if(CALC.open)calcClose();else calcOpen()}
+function calcPress(k){
+  CALC._err=null;
+  if(k==='C'){CALC.expr='';CALC.fresh=false;CALC._preview=null;calcRender();return}
+  if(k==='bs'){if(CALC.fresh){CALC.fresh=false}CALC.expr=CALC.expr.slice(0,-1);calcPreview();calcRender();return}
+  if(k==='='){
+    try{
+      var v=calcEval(CALC.expr|| (CALC.ans!=null?String(CALC.ans):''));
+      CALC.ans=v;CALC.fresh=true;
+      CALC.hist.unshift({e:CALC.expr,v:v});if(CALC.hist.length>6)CALC.hist.pop();
+      CALC._preview=calcFmt(v);CALC.expr=CALC.expr;
+    }catch(e){CALC._err=calcErrMsg(e)}
+    calcRender();return;
+  }
+  if(k==='Ans'){
+    if(CALC.ans==null){CALC._err=calcErrMsg({message:'ans'});calcRender();return}
+    if(CALC.fresh){CALC.expr='';CALC.fresh=false}
+    CALC.expr+='Ans';calcPreview();calcRender();return;
+  }
+  if(k==='±'){
+    if(CALC.fresh&&CALC.ans!=null){CALC.expr=calcFmt(-CALC.ans);CALC.fresh=false;calcPreview();calcRender();return}
+    if(!CALC.expr){CALC.expr='-';calcRender();return}
+    if(CALC.expr.charAt(0)==='-'&&CALC.expr.charAt(1)!=='('){CALC.expr=CALC.expr.slice(1)}
+    else if(CALC.expr.indexOf('-(')===0&&CALC.expr.slice(-1)===')'){CALC.expr=CALC.expr.slice(2,-1)}
+    else {CALC.expr='-('+CALC.expr+')'}
+    calcPreview();calcRender();return;
+  }
+  if(k==='√'){
+    if(CALC.fresh){CALC.expr='';CALC.fresh=false}
+    CALC.expr+='√(';calcPreview();calcRender();return;
+  }
+  var ops={'×':'×','÷':'÷','+':'+','−':'−','^':'^','%':'%','(':'(',')':')','.':'.'};
+  var isOp=!!ops[k]&&k!=='.'&&k!=='('&&k!==')'&&k!=='%';
+  if(CALC.fresh){
+    if(isOp&&CALC.ans!=null){CALC.expr=calcFmt(CALC.ans);CALC.fresh=false}
+    else if(/^[0-9.]$/.test(k)||k==='('||k==='√'){CALC.expr='';CALC.fresh=false}
+    else {CALC.fresh=false}
+  }
+  if(k==='^')CALC.expr+='^';
+  else CALC.expr+=k;
+  calcPreview();calcRender();
+}
+$('#calcFab').onclick=function(){calcOpen()};
+$('#calcClose').onclick=function(){calcClose()};
+$('#calc').onclick=function(e){if(e.target===$('#calc'))calcClose()};
+$$('#calcKeys [data-k]').forEach(function(b){b.onclick=function(){calcPress(b.getAttribute('data-k'))}});
+document.addEventListener('keydown',function(e){
+  if(!CALC.open){return}
+  if(e.key==='Escape'){calcClose();return}
+  var map={'Enter':'=','=':'=','Backspace':'bs','Delete':'C','+':'+','-':'−','*':'×','/':'÷','^':'^','%':'%','(':'(',')':')','.':'.'};
+  if(map[e.key]){e.preventDefault();calcPress(map[e.key]);return}
+  if(e.key>='0'&&e.key<='9'){e.preventDefault();calcPress(e.key)}
+});
+
+window.ICG={go:go,startQuiz:startQuiz,qz:function(){return QZ},backupCode:backupCode,parseBackup:parseBackup,applyBackup:applyBackup,KEY:KEY,THEME_KEY:THEME_KEY,getTheme:getTheme,applyTheme:applyTheme,PRIVACY_KEY:PRIVACY_KEY,getPrivacy:getPrivacy,applyPrivacy:applyPrivacy,evalExpr:calcEval,fmtNum:calcFmt,calcOpen:calcOpen,calcClose:calcClose,calcPress:calcPress,CALC:CALC};
 go('home');
 })();
