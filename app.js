@@ -10,6 +10,25 @@ var QBY={};D.questions.forEach(function(q){QBY[q.id]=q});
 var CHBY={};D.chapters.forEach(function(c){CHBY[c.id]=c});
 /* ---------- storage ---------- */
 var KEY='icgram_v1', S;
+
+var THEME_KEY='icgram-theme';
+function getTheme(){try{var t=localStorage.getItem(THEME_KEY);if(t==='light'||t==='dark')return t}catch(e){}return 'dark'}
+function syncThemeUI(t){
+  var b=$('#btnTheme');
+  if(b){b.textContent=t==='light'?'☾':'☀';b.setAttribute('aria-label',t==='light'?'สลับเป็นโทนดำ':'สลับเป็นโทนขาว');b.setAttribute('title',t==='light'?'โทนขาว · แตะเพื่อใช้โทนดำ':'โทนดำ · แตะเพื่อใช้โทนขาว')}
+  $$('#themeSeg [data-theme-set]').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-theme-set')===t)});
+}
+function applyTheme(t){
+  if(t!=='light'&&t!=='dark')t='dark';
+  try{localStorage.setItem(THEME_KEY,t)}catch(e){}
+  var root=document.documentElement;
+  root.setAttribute('data-theme',t);
+  root.style.background=t==='light'?'#fff':'#000';
+  var m=$('meta[name="theme-color"]');if(m)m.setAttribute('content',t==='light'?'#ffffff':'#000000');
+  var s=$('meta[name="apple-mobile-web-app-status-bar-style"]');if(s)s.setAttribute('content',t==='light'?'default':'black');
+  syncThemeUI(t);
+}
+function toggleTheme(){applyTheme(getTheme()==='dark'?'light':'dark')}
 function load(){try{S=JSON.parse(localStorage.getItem(KEY))||{}}catch(e){S={}}
   S.attempts=S.attempts||[];S.best=S.best||{};S.stats=S.stats||{};S.wrong=S.wrong||{};S.liked=S.liked||{};S.seen=S.seen||{};S.answered=S.answered||{};}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -71,9 +90,11 @@ $$('#bottomnav button').forEach(function(b){b.onclick=function(){go(b.dataset.ta
 $('#logo').onclick=function(){go('home')};
 $('#btnFormula').onclick=function(){go('formula')};
 $('#btnLiked').onclick=function(){go('liked')};
+$('#btnTheme').onclick=toggleTheme;
 $('#navAvatar').src=thumb(0);
 function updLiked(){var n=Object.keys(S.liked).length;$('#likedCount').textContent=n?n:''}
 updLiked();
+applyTheme(getTheme());
 /* ---------- HOME / FEED ---------- */
 var heroT=null;function stopHero(){if(heroT){clearInterval(heroT);heroT=null}}
 function home(v){
@@ -246,6 +267,7 @@ function likedPage(v){var it=likedItems();v.innerHTML='<div class="page"><h1>♥
 function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;var nC=0,nW=0;for(var k in S.stats){nC+=S.stats[k].c;nW+=S.stats[k].w}
   var h='<div class="prof"><div class="ring"><img src="'+thumb(0)+'"></div><div class="pst"><div><b>'+tot+'</b><span>ชุดข้อสอบ</span></div><div><b>'+(nC+nW?Math.round(100*nC/(nC+nW))+'%':'–')+'</b><span>ตอบถูกรวม</span></div><div><b>'+it.length+'</b><span>บันทึก</span></div></div></div>'+
   '<div class="page" style="padding-top:0"><b>'+esc(ME)+'</b> · ติวสอบ IC Plain (P1)'+(ART?' · ทีม '+esc(NAMES.join(' / ')||ART):'')+'<div class="muted">เป้าหมาย ≥ '+PASS+'% · อ่านวันอาทิตย์ทีละนิดก็ถึงได้</div>'+
+  '<h2>ธีม</h2><div class="seg" id="themeSeg"><button type="button" data-theme-set="dark">โทนดำ</button><button type="button" data-theme-set="light">โทนขาว</button></div><p class="muted">ใช้โทนเดียวกันทั้งเว็บ ระบบจำค่าที่เลือกไว้ให้</p>'+
   '<h2>คะแนนสูงสุด</h2>'+Object.keys(D.sets).concat(['mix']).map(function(k){var p=S.best[k];return '<div class="bar2"><span class="lbl">'+esc(k==='mix'?'สุ่มรวม':D.sets[k].title)+'</span><div class="prog"><i style="width:'+(p||0)+'%"></i></div><span class="pc">'+(p!=null?p+'%':'–')+'</span></div>'}).join('')+
   '<h2>ความแม่นรายบท</h2>'+(Object.keys(acc).length?D.chapters.filter(function(c){return acc[c.id]}).map(function(c){var a=acc[c.id],p=Math.round(100*a.c/(a.c+a.w));return '<div class="bar2"><span class="lbl">'+esc(c.id+' '+c.title)+'</span><div class="prog"><i style="width:'+p+'%;'+(p<PASS?'background:var(--bad)':'')+'"></i></div><span class="pc">'+p+'%</span></div>'}).join(''):'<p class="muted">ยังไม่มีข้อมูล</p>')+
   '<h2>ข้อที่ผิดค้างอยู่</h2><button class="btn" id="toRev">ดู '+Object.keys(S.wrong).length+' ข้อในหน้าทบทวน</button>'+
@@ -254,6 +276,8 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
   '<h2>โหลดความคืบหน้า</h2><p class="muted">วางรหัสที่สำรองไว้ แล้วกดโหลด ระบบจะรวมกับข้อมูลในเครื่องนี้</p><textarea class="bak-code" id="bakIn" rows="4" placeholder="วางรหัสที่นี่"></textarea><button class="btn pri sm" id="bakLoad">โหลดความคืบหน้า</button>'+
   '<div style="margin-top:18px"><button class="btn sm" id="reset">ล้างข้อมูลความคืบหน้าทั้งหมด</button></div></div>';
   v.innerHTML=h;wireGrid(v,it);$('#toRev').onclick=function(){go('review')};
+  $$('#themeSeg [data-theme-set]').forEach(function(b){b.onclick=function(){applyTheme(b.getAttribute('data-theme-set'))}});
+  syncThemeUI(getTheme());
   var code=backupCode();$('#bakOut').value=code;
   $('#bakCopy').onclick=function(){copyText(code,'คัดลอกแล้ว')};
   if(navigator.share){var sh=$('#bakShare');sh.hidden=false;sh.onclick=function(){navigator.share({title:'ICgram สำรองความคืบหน้า',text:code}).then(function(){toast('แชร์แล้ว')}).catch(function(){})}};
@@ -261,6 +285,6 @@ function profile(v){var it=likedItems(),acc=chapterAcc(),tot=S.attempts.length;v
     if(!confirm('รวมความคืบหน้าจากรหัสนี้เข้าเครื่องนี้? คะแนนสูงสุดจะเก็บค่าที่ดีกว่า และประวัติข้อสอบจะถูกรวมกัน'))return;
     try{applyBackup(parsed.d);toast('โหลดแล้ว');location.reload()}catch(e){toast('โหลดไม่สำเร็จ')}};
   $('#reset').onclick=function(){if(confirm('ล้างคะแนน ประวัติ และรายการบันทึกทั้งหมด?')){localStorage.removeItem(KEY);load();updLiked();go('profile')}};}
-window.ICG={go:go,startQuiz:startQuiz,qz:function(){return QZ},backupCode:backupCode,parseBackup:parseBackup,applyBackup:applyBackup,KEY:KEY};
+window.ICG={go:go,startQuiz:startQuiz,qz:function(){return QZ},backupCode:backupCode,parseBackup:parseBackup,applyBackup:applyBackup,KEY:KEY,THEME_KEY:THEME_KEY,getTheme:getTheme,applyTheme:applyTheme};
 go('home');
 })();

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" data-theme="dark" style="background:#000">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -8,19 +8,28 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ICgram">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+(function(){var t="dark";try{var v=localStorage.getItem("icgram-theme");if(v==="light"||v==="dark")t=v}catch(e){}
+document.documentElement.setAttribute("data-theme",t);
+document.documentElement.style.background=t==="light"?"#fff":"#000";
+var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",t==="light"?"#ffffff":"#000000");
+var s=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(s)s.setAttribute("content",t==="light"?"default":"black");
+})();
+</script>
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=5">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=5">
 <link rel="icon" href="favicon.ico?v=5" sizes="any">
 <link rel="manifest" href="manifest.webmanifest?v=5">
 <title>ICgram · ติวสอบ IC Plain (P1)</title>
 <link rel="stylesheet" href="assets/katex/katex.min.css">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app.css?v=6">
 </head>
 <body>
 <div id="app">
   <header id="topbar">
     <div class="logo" id="logo">ICgram<span class="logo-dot">✦</span></div>
     <div class="top-actions">
+      <button class="icon-btn" id="btnTheme" title="โทนดำ · แตะเพื่อใช้โทนขาว" aria-label="สลับเป็นโทนขาว">☀</button>
       <button class="icon-btn" id="btnLiked" title="โพสต์ที่กดหัวใจ" aria-label="liked">♡<span class="badge" id="likedCount"></span></button>
       <button class="icon-btn" id="btnFormula" title="ชีตสูตร" aria-label="formula">∑</button>
     </div>
@@ -39,6 +48,6 @@
 <div id="toast"></div>
 <script src="config.js"></script>
 <script src="data.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
