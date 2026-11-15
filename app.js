@@ -147,10 +147,10 @@ function tone(seed){return (typeof seed==='number'?Math.abs(seed):hash(String(se
 function tileHTML(cls,label,seed){return '<div class="'+(cls||'')+' ph-tile tone-'+tone(seed)+'" aria-hidden="true">'+(label?('<span>'+esc(label)+'</span>'):'')+'</div>'}
 function headCrop(i){var p=D.photos[pidx(i)];if(!p||!p.fc||!p.w)return null;var w=p.w,h=p.h,F=p.fc[2]*h,S=Math.min(w,h,F*3.2),cx=p.fc[0]*w,top=p.fc[1]*h-F*0.8,left=cx-S/2;
   left=Math.max(0,Math.min(w-S,left));top=Math.max(0,Math.min(h-S,top));return {S:S,w:w,h:h,l:left,t:top,big:S<w*0.6}}
-function noteAvStyle(n){var c=headCrop(n);return c?'width:'+(c.w/c.S*100).toFixed(2)+'%;left:'+(-c.l/c.S*100).toFixed(2)+'%;top:'+(-c.t/c.S*100).toFixed(2)+'%':'width:100%;height:100%;left:0;top:0;object-fit:cover'}
-function noteAv(n){if(getPrivacy())return tileHTML('thumb','',n);return '<span class="thumb tz"><img class="artist nimg" loading="eager" decoding="async" data-n="'+n+'" src="'+thumb(n)+'" style="'+noteAvStyle(n)+'" alt=""></span>'}
-function noteAvFix(root){$$('img.nimg',root).forEach(function(im){var tries=0;im.onerror=function(){if(getPrivacy())return;tries++;if(tries>3)return;var n=+im.dataset.n;
-  if(tries===1){im.src=photo(n);return}var m=FP[(n+tries*11)%FP.length];im.dataset.n=m;im.setAttribute('style',noteAvStyle(m));im.src=thumb(m)};
+var NOTE_P=[0,8,14,24,28,35,44,49,56,66,71,77];
+function noteSeed(i){return NOTE_P[i%NOTE_P.length]}
+function noteAv(i,n){if(getPrivacy())return tileHTML('thumb','',n);var k=i+1;return '<img class="artist nimg" loading="eager" decoding="async" data-n="'+n+'" src="assets/notes/n'+(k<10?'0':'')+k+'.jpg" alt="">'}
+function noteAvFix(root){$$('img.nimg',root).forEach(function(im){var tries=0;im.onerror=function(){if(getPrivacy())return;tries++;if(tries>2)return;var n=+im.dataset.n;im.src=tries===1?thumb(n):photo(n)};
   if(im.complete&&!im.naturalWidth)im.onerror()})}
 function thumbHTML(seed,label){if(getPrivacy())return tileHTML('thumb',label||'IC',seed);var n=typeof seed==='number'?seed:hash(String(seed)),c=headCrop(n);
   if(!c)return '<img class="thumb artist" loading="lazy" src="'+thumb(n)+'"'+posStyle(n)+' alt="">';
@@ -182,9 +182,9 @@ applyTheme(getTheme());
 var heroT=null;function stopHero(){if(heroT){clearInterval(heroT);heroT=null}}
 function home(v){
   // notes
-  var NAV=[];for(var q=0;q<D.photos.length&&NAV.length<D.notes.length;q+=7){for(var r=q;r<q+7&&r<D.photos.length;r++){var hc=headCrop(r);if(hc&&!hc.big){NAV.push(r);break}}}
+  var NAV=NOTE_P;
   var notes='<div class="notes ign" aria-label="โน้ต">'+D.notes.map(function(n,i){var sd=NAV.length?NAV[i%NAV.length]:i;
-    return '<button type="button" class="note" data-i="'+i+'" style="--d:'+(i%4*0.6).toFixed(1)+'s"><span class="nbub"><span class="ntx">'+n.short+'</span><i class="nt1"></i><i class="nt2"></i></span><span class="nav">'+noteAv(sd)+'</span><span class="nlb">โน้ต '+(i+1)+'</span></button>'}).join('')+'</div>';
+    return '<button type="button" class="note" data-i="'+i+'" style="--d:'+(i%4*0.6).toFixed(1)+'s"><span class="nbub"><span class="ntx">'+n.short+'</span><i class="nt1"></i><i class="nt2"></i></span><span class="nav">'+noteAv(i,sd)+'</span><span class="nlb">โน้ต '+(i+1)+'</span></button>'}).join('')+'</div>';
   // stories: chapters + formula decks
   var st='<div class="stories">'+D.stories.map(function(s,i){
     var inner=getPrivacy()?tileHTML('',(s.label||'IC').slice(0,8),i):'<img loading="lazy" class="artist" src="'+thumb(s.photo)+'"'+posStyle(s.photo)+' alt="">';
@@ -254,8 +254,15 @@ function showExp(q,ok,el){var c=$('.comments',el);var n=cheerName()||'ICgram';
   c.innerHTML=(ok===null?'':'<div class="cmt"><span class="av">IC</span><div class="bub"><b>'+esc('ทีม '+n)+'</b> '+(ok?'ถูกต้อง! เก่งมาก ✨':'ยังไม่ใช่ ไม่เป็นไรนะ ข้อนี้เก็บไว้ในหน้า “ทบทวน” แล้ว')+'</div></div>')+
   '<div class="cmt"><span class="av">✓</span><div class="bub"><b>เฉลย</b> ข้อ '+L[q.ans]+'<br>'+expHTML(q)+'</div></div>'}
 /* ---------- notes & stories ---------- */
-function openNote(i){var n=D.notes[i];modal('<h3 style="margin:0 0 6px">📝 โน้ตย่อ</h3><div>'+n.full+'</div><div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button></div>')}
-function modal(h){var m=$('#modal');m.innerHTML='<div class="sheet">'+h+'</div>';m.classList.remove('hidden');m.onclick=function(e){if(e.target===m)closeModal()};var c=$('#mclose');if(c)c.onclick=closeModal}
+function openNote(i){var n=D.notes[i],sd=noteSeed(i),pv=getPrivacy();
+  var W=Math.min(window.innerWidth||390,520),b=pv?null:bannerPos(sd,W,Math.round(W*1.25),0);
+  var top=pv?'':'<div class="nph"><img class="artist" src="'+photo(sd)+'" style="'+(b?b.css:'object-position:50% 20%')+'" alt=""></div>';
+  modal('<div class="grab"></div><button class="nx" id="mx" aria-label="ปิด">✕</button>'+top+'<div class="nbody"><h3 style="margin:0 0 6px">📝 โน้ต '+(i+1)+'</h3><div>'+n.full+'</div><div style="margin-top:12px"><button class="btn pri" id="mclose">ปิด</button></div></div>','nsheet'+(pv?' nopic':''));
+  $('#mx').onclick=closeModal}
+function modal(h,cls){var m=$('#modal');m.innerHTML='<div class="sheet'+(cls?' '+cls:'')+'">'+h+'</div>';m.classList.remove('hidden');m.onclick=function(e){if(e.target===m)closeModal()};var c=$('#mclose');if(c)c.onclick=closeModal;
+  var sh=m.firstChild,y0=null,dy=0;sh.addEventListener('touchstart',function(e){if(sh.scrollTop>0){y0=null;return}y0=e.touches[0].clientY;dy=0;sh.style.transition='none'},{passive:true});
+  sh.addEventListener('touchmove',function(e){if(y0==null)return;dy=e.touches[0].clientY-y0;if(dy>0){sh.style.transform='translateY('+dy+'px)';if(e.cancelable)e.preventDefault()}},{passive:false});
+  sh.addEventListener('touchend',function(){if(y0==null)return;sh.style.transition='transform .2s';if(dy>90){sh.style.transform='translateY(100%)';setTimeout(closeModal,180)}else sh.style.transform='';y0=null})}
 function closeModal(){$('#modal').classList.add('hidden')}
 var SV=null;
 function openStory(si){var s=D.stories[si];S.seen[s.id]=1;save();var el=$('#story');el.classList.remove('hidden');document.body.style.overflow='hidden';
